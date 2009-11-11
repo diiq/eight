@@ -15,18 +15,19 @@ extern YYSTYPE yylval;
              } else {yytext[yyleng-1] = 0;
                      BEGIN(INITIAL); 
                      return STRIN;}}
-<str>([^\"](\\\")?)*  {yylval = (int)yytext;}
+<str>([^\"](\\\")?)*  {yylval.strin = yytext;}
 
 
 \;.*$         {}
 \,           { return COMM; }
 \*           { return ASTERI; }
+\@           { return ATPEN; }
 \'           { return QUOT; }
 \(           { return OPEN;}
 \)           { return CLOSE;}
 \.\.\.       { return ELIPSI;}
-[0-9]+       {yylval = atoi(yytext); return NUMBE;}
-[^\"\*\(\)\t\r\n\;\.\," '"]+   { yylval = (int)yytext; return SYMBO;}
+[0-9]+       {yylval.fixi = atoi(yytext); return NUMBE;}
+[^\"\@\*\(\)\t\r\n\;\.\," '"]+   { yylval.strin = yytext; return SYMBO;}
 <<EOF>>      { return END; }
 [\n\t ]*  {}   
 

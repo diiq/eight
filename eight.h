@@ -4,8 +4,6 @@
 #include "stdio.h"
 #include "gc.h"
 
-
-
 // Machine flags, which trigger the 8 VM to change state.
 typedef enum {
   DO, APPLY, CONTINUE_APPLY, ATPEND_APPLY, ARGUMENT, E_ARGUMENT, SIGNAL,
@@ -59,7 +57,7 @@ struct cons_pair_struct {
 struct closure_struct  {         
      closure_type      type;
      union {
-	  int          value; // generic
+          void        *value; // generic
 	  int          fixvalue;
 	  char         charvalue;// should probably change for unicode
 	  symbol_id    symbol_id;

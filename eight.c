@@ -24,14 +24,19 @@ TODO
 #include "gc.h"
 
 closure *e_argument;
+closure *clear;
 
 machine *init_8VM()
 {
      e_argument = symbol(E_ARGUMENT); 
      e_argument->type = INTERNAL;
 
+     clear = symbol(CLEAR); 
+     clear->type = INTERNAL;
+
      insert_symbol("quote", QUOTE);
      insert_symbol("asterix", ASTERIX);
+     insert_symbol("atpend", ATPEND);
      insert_symbol("comma", COMMA);
      insert_symbol("...", ELIPSIS);
      insert_symbol("t", T);
@@ -311,6 +316,14 @@ int asterixp(closure *arg)
 	 (car(arg)->symbol_id == ASTERIX)) return 1;
      return 0;
 };
+int atpendp(closure *arg)
+{
+     // returns true if argument == *x
+     if ((arg->type == CONS_PAIR) &&
+	 (car(arg)->type == SYMBOL) &&
+	 (car(arg)->symbol_id == ATPEND)) return 1;
+     return 0;
+};
 int quotep(closure *sym)
 {
      // returns true if argument == *x
@@ -369,6 +382,24 @@ operation *build_argument_chain(closure *lambda_list,
 	  operation *bnext = (operation*)GC_MALLOC(sizeof(operation));
 	  bnext->type = MACHINE_FLAG;
 	  bnext->flag = CONTINUE_APPLY;
+	  bnext->closure = cons(lambda_list, cdr(arg_list));
+	  current->next = bnext;
+	  current = bnext;
+
+	  return current;
+
+     } else if (atpendp(car(arg_list))){
+	  // accum->(closure_op, x)->(continue_apply,
+	  //                          (lambda_list . arg_list->cdr))
+	  operation *tnext = (operation*)GC_MALLOC(sizeof(operation));
+	  tnext->type = CLOSURE_OP;
+	  tnext->closure = second(car(arg_list));
+	  current->next = tnext;
+	  current = tnext;
+
+	  operation *bnext = (operation*)GC_MALLOC(sizeof(operation));
+	  bnext->type = MACHINE_FLAG;
+	  bnext->flag = ATPEND_APPLY;
 	  bnext->closure = cons(lambda_list, cdr(arg_list));
 	  current->next = bnext;
 	  current = bnext;
@@ -467,6 +498,19 @@ operation *make_arg(closure *sym, closure *val, operation *current)
 	  current->closure = sym;
      }
      return current;
+}
+
+closure *clear_list(closure *args)
+{
+     if (args->type != CONS_PAIR){
+	  printf("YOU'RE A POOP_HEAD");
+	  return nil();
+     } else {
+	  if (cdr(args)->type != NIL) 
+	       return cons(cons(clear, cons(car(args), nil())), 
+			   clear_list(cdr(args)));
+	  return  cons(cons(clear, cons(car(args), nil())), nil());
+     }
 }
 
 int free_varp(closure *token,
@@ -613,6 +657,8 @@ int virtual_machine_step(machine *m)
 	       m->accum = bclose(second(instruction->closure), m->current_frame,
 		    m->base_frame);
 	       // TODO sanity check, is lonely cdr?
+	  } else if (car(instruction->closure)->symbol_id == CLEAR){
+	       m->accum = car(cdr(instruction->closure));
 	  } else if (stringp(instruction->closure)){
 	       m->accum = instruction->closure;
 	  } else {
@@ -670,8 +716,16 @@ int virtual_machine_step(machine *m)
 	  } else if (instruction->flag == CONTINUE_APPLY){
 	       operation* fn=(operation*)GC_MALLOC(sizeof(operation));
 	       operation* boo = build_argument_chain(car(instruction->closure),
-					 append(m->accum, cdr(instruction->closure)),
-					 fn);
+						     append(m->accum, cdr(instruction->closure)),
+						     fn);
+	       boo->next = m->current_frame->next;
+	       m->current_frame->next = fn->next;
+	  } else if (instruction->flag == ATPEND_APPLY){
+	       closure *args = clear_list(m->accum);
+	       operation* fn=(operation*)GC_MALLOC(sizeof(operation));
+	       operation* boo = build_argument_chain(car(instruction->closure),
+						     append(args, cdr(instruction->closure)),
+						     fn);
 	       boo->next = m->current_frame->next;
 	       m->current_frame->next = fn->next;
 	  } else if (instruction->flag == DO){

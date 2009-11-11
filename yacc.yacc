@@ -7,58 +7,72 @@
 #include "symbols.c"
 #include "strings.c"
   machine *m;
+
 %}
 
 %start root
 
+%union {closure * clos;
+  char * strin;
+  int fixi;
+};
+
 %token END
 %token OPEN
 %token CLOSE
-%token STRIN
-%token NUMBE
-%token SYMBO
+%token <strin> STRIN
+%token <fixi> NUMBE
+%token <strin> SYMBO
 %token QUOT
 %token ASTERI
+%token ATPEN
 %token ELIPSI
 %token COMM
+
+%type <clos> list cons atom
+
 
 %%
 
 root:
     | list                   { //print_closure((closure*)$1);
-                              return (int)eval((closure *)$1, m); } 
+                              return eval($1, m); } 
     | atom                   { //print_closure((closure*)$1);
-                              return (int)eval((closure *)$1, m); }  
+                              return eval($1, m); }  
     | END                    { return -1; }
 
 list:
-    OPEN cons CLOSE          { $$ = (int)$2; }
-    | OPEN CLOSE             { $$ = (int)nil();}
-    | QUOT list              { $$ = (int)cons(symbol(QUOTE), 
-					 cons((closure *)$2, nil())); }
-    | ASTERI list            { $$ = (int)cons(symbol(ASTERIX), 
-					 cons((closure *)$2, nil())); }
-    | COMM list              { $$ = (int)cons(symbol(COMMA), 
-					 cons((closure *)$2, nil())); }
+    OPEN cons CLOSE          { $$ = $2; }
+    | OPEN CLOSE             { $$ = nil();}
+    | QUOT list              { $$ = cons(symbol(QUOTE), 
+					 cons($2, nil())); }
+    | ASTERI list            { $$ = cons(symbol(ASTERIX), 
+					 cons($2, nil())); }
+    | ATPEN list            { $$ = cons(symbol(ATPEND), 
+					 cons($2, nil())); }
+    | COMM list              { $$ = cons(symbol(COMMA), 
+					 cons($2, nil())); }
 
 cons: 
-    atom cons                { $$ = (int)cons((closure *)$1, (closure *)$2);} 
-    | list cons              { $$ = (int)cons((closure *)$1, (closure *)$2);} 
-    | list                   { $$ = (int)cons((closure *)$1, nil()); }
-    | atom                   { $$ =(int) cons((closure *)$1, nil()); }
+    atom cons                { $$ = cons($1, $2);} 
+    | list cons              { $$ = cons($1, $2);} 
+    | list                   { $$ = cons($1, nil()); }
+    | atom                   { $$ = cons($1, nil()); }
 
     
 atom:
-    QUOT atom                { $$ =  (int)cons(symbol(QUOTE), 
-					  cons((closure *)$2, nil())); }
-    | ASTERI atom            { $$ =  (int)cons(symbol(ASTERIX), 
-					  cons((closure *)$2, nil())); }
-    | COMM atom              { $$ =  (int)cons(symbol(COMMA), 
-					  cons((closure *)$2, nil())); }
-    | NUMBE                  { $$ = (int)fixnum($1); }
-    | SYMBO                  { $$ = (int)symbol(string_to_symbol_id((char*)$1)); }
-    | ELIPSI                 { $$ = (int)symbol(ELIPSIS); }
-    | STRIN                  { $$ = (int)string((char*)$1); }
+    QUOT atom                { $$ =  cons(symbol(QUOTE), 
+					  cons($2, nil())); }
+    | ASTERI atom            { $$ =  cons(symbol(ASTERIX), 
+					  cons($2, nil())); }
+    | ATPEN atom            { $$ =  cons(symbol(ATPEND), 
+					  cons($2, nil())); }
+    | COMM atom              { $$ =  cons(symbol(COMMA), 
+					  cons($2, nil())); }
+    | NUMBE                  { $$ = fixnum($1); }
+    | SYMBO                  { $$ = symbol(string_to_symbol_id((char*)$1)); }
+    | ELIPSI                 { $$ = symbol(ELIPSIS); }
+    | STRIN                  { $$ = string((char*)$1); }
 
 
 %%

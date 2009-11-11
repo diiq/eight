@@ -20,7 +20,7 @@ void print_closure(closure *a)
      } else if (a->type == NIL){
 	  printf("()");
      }  else {
-	  printf("v%d", a->value);
+         printf("v%d", (int)a->value);
      }
      //printf("[");
      // print_assoc(a->closed);
