@@ -37,9 +37,9 @@ void initialize_symbol_table()
 
 void insert_symbol(char *name, int val)
 {
-     int *vala = malloc(sizeof(int));
+     int *vala = GC_MALLOC_ATOMIC(sizeof(int));
      *vala = val;
-     char *key = malloc(sizeof(char)*(strlen(name)+1));
+     char *key = GC_MALLOC_ATOMIC(sizeof(char)*(strlen(name)+1));
      key = strcpy(key, name);
      if (!hashtable_insert(Symbol_table, key, vala)){
           printf("Symbol error!");

@@ -2,7 +2,8 @@
 
 #ifndef __HASHTABLE_CWC22_H__
 #define __HASHTABLE_CWC22_H__
-
+#define malloc(x) GC_MALLOC(x)
+#define free(x) NULL
 struct hashtable;
 
 /* Example of use:

@@ -4,6 +4,8 @@
 #define __HASHTABLE_ITR_CWC22__
 #include "hashtable.h"
 #include "hashtable_private.h" /* needed to enable inlining */
+#define malloc(x) GC_MALLOC(x)
+#define free(x) NULL
 
 /*****************************************************************************/
 /* This struct is only concrete here to allow the inlining of two of the
