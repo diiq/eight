@@ -1,25 +1,27 @@
 ; hi! If you're reading this to learn about eight, I suggest skipping the 
-; following 3 functions, until you're more comfortable with the language.
+; following 4 functions, until you're more comfortable with the language.
 ; If you feal comfortable with the 8 function 'leak', and the behavior of
 ; 8's semiotic programming features, then by all means, dive in. Otherwise,
 ; skip to 'do', and work from there. Good luck!
 ;
 ; --s
 ;
-(base-signal-handler '((q)  (print (car (car (cdr q))))
-			    (print (cdr (car (cdr q)))) ()))
+(base-signal-handler '((q)  (print q) ()))
 
- (set! unlambda '((list)
+(set! unlambda '((list)
 		 (oif list (oif (is (car list) '...) 
 		    	        (unlambda (cdr list))
    			        (cons (oif (atom-p (car list)) 
 				           (car list) 
-				           (car (cdr (car list))))
+				           (oif (is (car (car list)) 'quote)
+					       (car (cdr (car list)))
+					       (car (car list))))
 				      (unlambda (cdr list)))) ())))
-; this isn't tail-recursive, but I don't currently optimize tail recursion, so there you go.
-	
+; ought to make this tail recursive
+
 (set! leak-all '((list closure)
-		 (oif list (leak-all (cdr list) (leak (car list) closure)) closure)))					                                       		 
+		 (oif list (leak-all (cdr list) (leak (car list) closure)) closure)))
+ 
 (set! fn '(('lambda-list ... 'code)
 	   (cons lambda-list (leak-all (unlambda lambda-list) code))))
 
@@ -28,7 +30,7 @@
              ((fn () *evals))))
 
 (set! def (fn ('name 'lambda-list ... 'code) 
-              (set! ,name (fn ,lambda-list *code)))) 
+              (set! ,name (fn ,lambda-list *code))))
 
 (def caar (xs) (car (car xs)))
 (def cadr (xs) (car (cdr xs)))
@@ -67,7 +69,7 @@
          (cons (f (car xs) (cadr xs))
                (pair (cddr xs) f))))
 
-(def and (arg ... 'args)
+(def and ((arg t) ... 'args)
   (if args 
       (if arg (and *args))
       arg))
@@ -180,8 +182,6 @@
 
 ; I don't like the fact that I must quote yss here; I think I may
 ; have made a bad decision about the asterix operator.
-(def poop (a) a)
-
 (def append (xs ys ... 'yss)
   (if xs
       (cons (car xs) (append (cdr xs) ys *yss))
@@ -191,7 +191,27 @@
 
 ;nother iffy quote; not sure this fn is needed at all; really doubting *
 
-;(def mappend (f ... args)
-;  (append @(map f @args)))
+(def mappend (f ... args)
+  (append @(map f @args)))
 
+(def firstn (n xs)
+  (if (no n) xs
+      (and (> n 0) xs) (cons (car xs) (firstn (minus n 1) (cdr xs)))
+      ()))
+
+(def nthcdr (n xs)
+  (if (no n) xs
+      (> n 0) (nthcdr (- n 1) (cdr xs))
+      xs))
+
+(def tuples (xs (n 2))
+  (if (no xs)
+      ()
+      (cons (firstn n xs)
+	    (tuples (nthcdr n xs) n))))
+
+(def caris (x val) 
+  (and (acons x) (is (car x) val)))
+
+; Atomic operations here, but I don't currently have threading.
 

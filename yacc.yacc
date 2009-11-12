@@ -70,9 +70,9 @@ atom:
     | COMM atom              { $$ =  cons(symbol(COMMA), 
 					  cons($2, nil())); }
     | NUMBE                  { $$ = fixnum($1); }
-    | SYMBO                  { $$ = symbol(string_to_symbol_id((char*)$1)); }
+    | SYMBO                  { $$ = symbol(string_to_symbol_id($1)); }
     | ELIPSI                 { $$ = symbol(ELIPSIS); }
-    | STRIN                  { $$ = string((char*)$1); }
+    | STRIN                  { $$ = string($1); }
 
 
 %%

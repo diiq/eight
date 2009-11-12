@@ -24,15 +24,15 @@ TODO
 #include "gc.h"
 
 closure *e_argument;
-closure *clear;
+closure *cleari;
 
 machine *init_8VM()
 {
      e_argument = symbol(E_ARGUMENT); 
      e_argument->type = INTERNAL;
 
-     clear = symbol(CLEAR); 
-     clear->type = INTERNAL;
+     cleari = symbol(CLEAR); 
+     cleari->type = INTERNAL;
 
      insert_symbol("quote", QUOTE);
      insert_symbol("asterix", ASTERIX);
@@ -507,9 +507,9 @@ closure *clear_list(closure *args)
 	  return nil();
      } else {
 	  if (cdr(args)->type != NIL) 
-	       return cons(cons(clear, cons(car(args), nil())), 
+	       return cons(cons(cleari, cons(car(args), nil())), 
 			   clear_list(cdr(args)));
-	  return  cons(cons(clear, cons(car(args), nil())), nil());
+	  return  cons(cons(cleari, cons(car(args), nil())), nil());
      }
 }
 

@@ -156,6 +156,10 @@ void leak_fn(machine *m)
      closure *sym = get_arg(sym, m);
      if (sym->type != SYMBOL && sym->type != NIL){
 	  closure *sig = build_signal(cons(string("\n\nI cannot speak about rhymes\nwhen the juice of the orange\nis still dripping from my chin\n\n\nerror: I attempted to leak something that isn't a symbol: "), sym), m);
+
+	  print_closure(sym);
+	  printf("\n");
+	  //print_closure((closure *) 5);
 	  toss_signal(sig, m);
      } else {
 	  closure *clos = get_arg(closure, m);
@@ -271,6 +275,50 @@ void base_handler(machine *m){
 }
 
 
+
+//------------------ MATHS!----------------------//
+
+
+void plus_fn(machine *m){     
+     closure *a = get_arg(a, m);
+     closure *b = get_arg(b, m);
+     m->accum = fixnum(a->fixvalue + b->fixvalue);
+}
+void minus_fn(machine *m){     
+     closure *a = get_arg(a, m);
+     closure *b = get_arg(b, m);
+     m->accum = fixnum(a->fixvalue - b->fixvalue);
+}
+void multiply_fn(machine *m){     
+     closure *a = get_arg(a, m);
+     closure *b = get_arg(b, m);
+     m->accum = fixnum(a->fixvalue * b->fixvalue);
+}
+void divide_fn(machine *m){     
+     closure *a = get_arg(a, m);
+     closure *b = get_arg(b, m);
+     m->accum = fixnum(a->fixvalue / b->fixvalue);
+}
+void greater_fn(machine *m){     
+     closure *a = get_arg(a, m);
+     closure *b = get_arg(b, m);
+     if (a->fixvalue > b->fixvalue)
+       m->accum = symbol(T);
+     else 
+       m->accum = nil();
+}
+void less_fn(machine *m){     
+     closure *a = get_arg(a, m);
+     closure *b = get_arg(b, m);
+     if (a->fixvalue < b->fixvalue)
+       m->accum = symbol(T);
+     else 
+       m->accum = nil();
+}
+
+
+
+
 void new_basic_commands(machine *m)
 {	  
     // TODO This is still more complicated than it should be.
@@ -319,6 +367,21 @@ void new_basic_commands(machine *m)
 						       nil()), m);  
 
      intern_fn(unhandle-signal, &unhandle_signal, cons(make_arg(sig),  nil()), m);
+
+     //maths
+
+     intern_fn(plus, &plus_fn, cons(make_arg(a), 
+				    cons(make_arg(b), nil())), m);
+     intern_fn(minus, &minus_fn, cons(make_arg(a), 
+				      cons(make_arg(b), nil())), m);
+     intern_fn(multiply, &multiply_fn, cons(make_arg(a), 
+					    cons(make_arg(b), nil())), m);
+     intern_fn(divide, &divide_fn, cons(make_arg(a), 
+					cons(make_arg(b), nil())), m);
+     intern_fn(>, &greater_fn, cons(make_arg(a), 
+					cons(make_arg(b), nil())), m);
+     intern_fn(<, &less_fn, cons(make_arg(a), 
+					cons(make_arg(b), nil())), m);
 }    
 
 #endif
