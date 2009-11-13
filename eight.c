@@ -270,7 +270,7 @@ closure *looker_up(closure *symbol, frame *aframe, frame *base_frame)
      // But I don't think it'll be an issue.
      closing *local = assoc(symbol->symbol_id, symbol->closed);
      if (local == NULL) 
-	  return looker_up_internal(symbol->symbol_id, aframe, base_frame);
+       return looker_up_internal(symbol->symbol_id, aframe, base_frame);
      return local->val;
 };
 
@@ -278,10 +278,10 @@ closure *looker_up_internal(symbol_id symbol, frame *aframe, frame *base_frame)
 {
      closing* local =  assoc(symbol, aframe->scope);
      if (local == NULL) {
-	  local = assoc(symbol, base_frame->scope);
+       if (aframe->below == NULL)
+	 return NULL;
+       return looker_up_internal(symbol, aframe->below, base_frame);
      }
-     if (local == NULL)
-	  return NULL;
      return local->val;
 };
 
