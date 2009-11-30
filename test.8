@@ -6,6 +6,7 @@
 (print (is ('(('b) b) ,a) 5))
 (print (is ('((a) a) 25) 5))
 (print (is ((leak 'a '((a) a)) 25) 25))
+
 (print (is (car ('((... 'b) b) c a 2 q)) 'c))
 (print (is (car (car ('((... 'b) b) ,(cons 'c (cons 'a ()))))) 'c))
 (print (is (call/cc (fn (f) (f 5) 4)) 5))

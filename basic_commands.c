@@ -2,15 +2,16 @@
 #define COMMANDS_
 
 #include "eight.h"
+#include <dlfcn.h>
 
 //what actually needs to be done? the symbol needs to be registered, 
 // the lambda-list built, the arguments looked up, function made, and
 // function bound.
 
 #define make_arg(sym) symbol(string_to_symbol_id(#sym))
-#define get_arg(sym, m) looker_up_internal(string_to_symbol_id(#sym),	\
+#define get_arg(sym, m) looker_up(symbol(string_to_symbol_id(#sym)),	\
 					m->current_frame,		\
-					m->base_frame)			\
+					m->base_frame)    		\
 
 #define intern_fn(fn_name, fn_pointer, lambda_list, m)	do {		\
 	  sym = symbol(string_to_symbol_id(#fn_name));			\
@@ -31,7 +32,7 @@ void set_fn(machine *m)
 	  toss_signal(sig, m);
      } else {
      closure *b = get_arg(b, m);
-     internal_set(a, b, m->current_frame->below, m->base_frame);
+     internal_set(a, b, m->current_frame, m->base_frame);
      m->accum = b;
      }
 }
@@ -137,12 +138,8 @@ void atomp_fn(machine *m)
 void print_fn(machine *m)
 {
      closure *a = get_arg(a, m);
-     if(stringp(a)){
-	  print_string_internal(a);
-     } else {
-	  print_closure(a);
-	  printf("\n");
-     }
+     print_closure(a);
+     printf("\n");
 }
 
 void prmachine_fn(machine *m)
@@ -166,8 +163,8 @@ void leak_fn(machine *m)
 	  closure *ret = (closure *)GC_MALLOC(sizeof(closure));
 	  ret->type = clos->type;
 	  ret->value = clos->value;
-	  ret->annotation = clos->annotation;   
-	  ret->closed = remove_sym(sym->symbol_id, clos->closed);    
+	  ret->annotation = clos->annotation;
+	  ret->closed = remove_sym(sym->symbol_id, clos->closed);  
 	  m->accum = ret;
      }
 }
@@ -316,7 +313,54 @@ void less_fn(machine *m){
        m->accum = nil();
 }
 
+//------------------------------- FFI --------------------------------//
 
+
+/* char *to_c_string(closure *str); */
+
+/* closure *to_eight_string(char *str); */
+
+/* int fix_to_int(closure *num); */
+
+/* closure *int_to_fix(int num); */
+
+/* void load_lib_fn(machine *m){ */
+/*   closure *name = get_arg(name, m); */
+/*   char *rname = to_c_string(name); */
+/*   void *lib = dlopen(rname,RTLD_NOW|RTLD_GLOBAL); */
+/*   closure *ret = (closure *)GC_MALLOC(sizeof(closure)); */
+/*   ret->type = C_OBJECT; */
+/*   ret->value = lib; */
+/*   m->accum = ret; */
+/* } */
+
+/* void get_lib_object_fn(machine *m){ */
+/*   closure *lib = get_arg(lib, m); */
+/*   closure *name = get_arg(name, m); */
+/*   char *rname = to_c_string(name); */
+/*   void *obj = dlsym(rname, (lib->value)); */
+/*   closure *ret = (closure *)GC_MALLOC(sizeof(closure)); */
+/*   ret->type = C_OBJECT; */
+/*   ret->value = &obj; */
+/*   m->accum = ret; */
+/* } */
+
+/* void call_c_fn(machine *m){ */
+/*   closure *fn = get_arg(fn, m); */
+/*   closure *args = get_arg(args, m); */
+/*   int len = length(args); */
+/*   void * (*pooer)() = (fn->value); */
+/*   void *rret; */
+/*   switch (len) { */
+/*   case 0: rret = &(pooer()); */
+/*   } */
+/*   closure *ret = (closure *)GC_MALLOC(sizeof(closure)); */
+/*   ret->type = C_OBJECT; */
+/*   ret->value = rret; */
+/*   m->accum = ret; */
+/* } */
+
+//--------------------------------------------------------------------//
 
 
 void new_basic_commands(machine *m)

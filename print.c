@@ -60,7 +60,7 @@ void print_assoc(closing *cl)
 {
      if (cl != NULL){
          printf("%s->", symbol_id_to_string(cl->sym));
-         print_closure(cl->val);
+         print_closure(*(cl->val));
          printf(", ");
 	 print_assoc(cl->next);
      }

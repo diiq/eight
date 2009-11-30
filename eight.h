@@ -23,7 +23,7 @@ typedef enum {
 typedef int symbol_id;
 
 typedef enum  {
-  CLOSURE, SYMBOL, CONS_PAIR, NIL, FIXNUM, CHARACTER, INTERNAL, CONTINUATION 
+  CLOSURE, SYMBOL, CONS_PAIR, NIL, FIXNUM, CHARACTER, INTERNAL, CONTINUATION, C_OBJECT 
 } closure_type;
 
 typedef enum {
@@ -41,7 +41,7 @@ typedef void (* builtin) (machine*);
 /* A closing is a linked list of bindings, symbol to closure. */
 struct closing_struct {
      symbol_id  sym;
-     closure   *val;
+     closure   **val;
      closing   *next;
 };
 
@@ -112,8 +112,11 @@ void aappend(closure *val, closing *aclosing);
 closure *second(closure* list);
 closing *assoc(symbol_id sym, closing* closing);
 closing *acons(symbol_id sym, closure *val, closing *aclosing);
+int length(closure *xs);
+
 closure *looker_up(closure *symbol, frame *aframe, frame *base_frame);
-closure *looker_up_internal(symbol_id symbol, frame *aframe, frame *base_frame);
+closure **s_looker_up(closure *symbol, frame *aframe, frame *base_frame);
+closure **looker_up_internal(symbol_id symbol, frame *aframe, frame *base_frame);
 void internal_set(closure *symbol, 
 		  closure *value, 
 		  frame   *aframe, 

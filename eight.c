@@ -252,19 +252,41 @@ closing *assoc(symbol_id sym, closing* closing)
 closing *acons(symbol_id sym, closure *val, closing *aclosing)
 {
      closing *output = (closing *) GC_MALLOC(sizeof(closing));
+     closure **reval = (closure**) GC_MALLOC(sizeof(closure *));
+     *reval = val;
      output->next = aclosing;
      output->sym = sym;
-     output->val = val;
+     output->val = reval;
      return output;
 };
 
 void aappend(closure *val, closing *aclosing)
 {
-     aclosing->val = append(aclosing->val, cons(val, nil()));
+  closure *b= append(*(aclosing->val), cons(val, nil()));
+  *(aclosing->val) = b;
 };
 
+int length(closure *xs)
+{
+  int i = 0;
+  while(xs->type == CONS_PAIR){
+    i++;
+    xs = cdr(xs);
+  }
+  return i;
+}
+
  
+
 closure *looker_up(closure *symbol, frame *aframe, frame *base_frame)
+{
+  closure **ret = s_looker_up(symbol, aframe, base_frame);
+  if (ret)
+    return *ret;
+  return NULL;
+};
+
+closure **s_looker_up(closure *symbol, frame *aframe, frame *base_frame)
 {
      // I could type-check for symbol-ness, here.
      // But I don't think it'll be an issue.
@@ -274,7 +296,7 @@ closure *looker_up(closure *symbol, frame *aframe, frame *base_frame)
      return local->val;
 };
 
-closure *looker_up_internal(symbol_id symbol, frame *aframe, frame *base_frame)
+closure **looker_up_internal(symbol_id symbol, frame *aframe, frame *base_frame)
 {
      closing* local =  assoc(symbol, aframe->scope);
      if (local == NULL) {
@@ -290,13 +312,13 @@ void internal_set(closure *symbol,
 		  frame   *aframe,
 		  frame   *base_frame)
 {
-     closure *old = looker_up(symbol, aframe, base_frame);
+     closure **old = looker_up_internal(symbol->symbol_id, aframe, base_frame);
      if (old == NULL){
 	  base_frame->scope = acons(symbol->symbol_id,
 				    value,
 				    base_frame->scope);
      } else {
-	  old->value = value->value;
+         *old = value;
      };
 }
 
@@ -624,7 +646,7 @@ int virtual_machine_step(machine *m)
 	       builtin fn = instruction->closure->builtin_fn;
 	       fn(m);
 	  } else if (instruction->closure->type == CONTINUATION){
-	       m->accum = looker_up_internal(string_to_symbol_id("a"), 
+	    m->accum = looker_up(symbol(string_to_symbol_id("a")), 
 					     m->current_frame,
 					     m->base_frame);
 	       m->base_frame = instruction->closure->mach->base_frame;
@@ -647,8 +669,7 @@ int virtual_machine_step(machine *m)
 	       cl->type = CLOSURE_OP;
 	       cl->closure = sub;
 	       new_frame->next = cl;
-	       new_frame->scope = closing_append(instruction->closure->closed,
-						 m->current_frame->scope);
+	       new_frame->scope = instruction->closure->closed;
 	       new_frame->below = m->current_frame;
 	       m->current_frame = new_frame;
 	  } else if (instruction->closure->type != CONS_PAIR){
@@ -682,7 +703,7 @@ int virtual_machine_step(machine *m)
 		    new_frame = m->current_frame;
 	       } else {
 		    new_frame = (frame*)GC_MALLOC(sizeof(frame));
-		    new_frame->scope = m->current_frame->scope;
+		    new_frame->scope = NULL;
 		    new_frame->below = m->current_frame;
 	       }
 	       new_frame->rib = m->accum->closed;

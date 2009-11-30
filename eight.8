@@ -6,6 +6,7 @@
 ;
 ; --s
 ;
+
 (base-signal-handler '((q)  (print q) ()))
 
 (set! unlambda '((list)
@@ -29,8 +30,10 @@
 (set! do (fn (... 'evals)
              ((fn () *evals))))
 
+
 (set! def (fn ('name 'lambda-list ... 'code) 
               (set! ,name (fn ,lambda-list *code))))
+
 
 (def caar (xs) (car (car xs)))
 (def cadr (xs) (car (cdr xs)))
@@ -38,7 +41,7 @@
 
 (def no (x) (is x ()))
 
-(def cons-p (x) (not (atom-p x)))
+(def cons-p (x) (no (atom-p x)))
 
 (def copylist (xs)
   (oif (no xs)
@@ -81,7 +84,10 @@
        (car al)
         (assoc key (cdr al))))
 
-(def alref (al key) (cadr (assoc key al)))
+(def alref (key al) (cadr (assoc key al)))
+
+(def acons (key val (al ()))
+	(cons (list key val) al))
 
 (def with ('parms ... 'body)
   ((fn (map1 car (pair parms))
@@ -215,3 +221,27 @@
 
 ; Atomic operations here, but I don't currently have threading.
 
+(def table () ())
+
+(set! sref assoc)
+
+(set! setter (table))
+
+(def defset ('name 'parms ... 'body)
+  (set! setter (acons name (fn ,parms ,body) setter)))
+
+(defset car (x val)
+  (scar x val))
+
+(defset cdr (x val)
+  (scdr x val))
+
+
+		       
+	
+
+(def aif (it 'then ... 'elses)
+  (if it ,(leak 'it then)
+          (cdr elses)
+           (aif *elses)
+         ,(car elses)))

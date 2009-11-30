@@ -85,11 +85,11 @@ int main( int   argc,
      initialize_symbol_table();
      m = init_8VM();
      set_input_source(fopen( "eight.8", "r" ));
-      int rep = 0; 
-      while (rep != -1){ 
-           rep = yyparse(); 
-      } 
-      fclose(yyin); 
+      int rep = 0;
+      while (rep != -1){
+           rep = yyparse();
+      }
+      fclose(yyin);
       int i;
       int interact = 0;
 
