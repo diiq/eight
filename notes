@@ -1,0 +1,11 @@
+What needs to change is adding an 'as' --- think that can be done in eight.
+Garbage collection.
+Dynamic loading
+
+Imma gonna represent closings as cons-lists, even though that's a bit gross,
+because then they easily represented from the outside.
+
+assoc returns nil on no result!
+
+
+OK, if any of your gc'd structures are smaller than three pointers, you'll fuck up, because the reference will be bigger than the object. Remember that.
