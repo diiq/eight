@@ -5,10 +5,10 @@ void print_closure(closure *a)
      if (a->type == SYMBOL) {
 	  char* sym = symbol_id_to_string(a->symbol_id);
 	  printf("%s", sym);
-     } else if (a->type == FIXNUM) {
-	  printf("%d", a->fixvalue);
+     } else if (a->type == NUMBER) {
+	  printf("%d", a->num);
      } else if (a->type == CHARACTER) {
-          printf("%c", a->charvalue);
+          printf("%c", a->character);
      } else if (a->type == NIL) {
 	  printf("()");
      } else if (stringp(a)) {
@@ -19,9 +19,9 @@ void print_closure(closure *a)
 	  printf(")");
      } else if (a->type == NIL){
 	  printf("()");
-     }  else {
-         printf("v%d", (int)a->value);
-     }
+     } // else {
+       //  printf("v%d", (int)a->obj);
+     //}
      //printf("[");
      // print_assoc(a->closed);
      //printf("]");
@@ -34,6 +34,7 @@ void print_cons(closure *cons)
 	  printf(" ");
 	  print_cons(cons->cons->cdr);
      } else if (cdr(cons)->type == NIL){
+       //printf("()");
      } else {
 	  printf(" . ");
 	  print_closure(cons->cons->cdr);
@@ -56,24 +57,18 @@ void print_cont(operation *ins)
      }
 }
 
-void print_assoc(closing *cl)
-{
-     if (cl != NULL){
-         printf("%s->", symbol_id_to_string(cl->sym));
-         print_closure(*(cl->val));
-         printf(", ");
-	 print_assoc(cl->next);
-     }
-}
-
 void print_frame(frame *fm)
 {
   printf("\nnext: ");
   print_cont(fm->next);
   printf("\nscope: ");
-  print_assoc(fm->scope);
+  print_closure(fm->scope);
   printf("\nrib: ");
-  print_assoc(fm->rib);
+  print_closure(fm->rib);
+}
+
+void print_machine(machine *m){
+  print_stack(m->current_frame);
 }
 
 void print_stack(frame *fm)
@@ -89,7 +84,7 @@ void print_string_internal(closure *a)
 {
   if (a->type == NIL)
     return;
-  printf("%c", car(a)->charvalue);
+  printf("%c", car(a)->character);
   print_string_internal(cdr(a));
 }
 

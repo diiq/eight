@@ -1,3 +1,4 @@
+(print (is (car (cons 2 3)) 2))
 (print (is (car ('((b) (cons 2 b)) 3)) 2))
 (print (is (cdr ('((b) (cons 2 b)) 3)) 3))
 (print (is (cdr (('((b) '((a) (cons a b))) 3) 2)) 3))
@@ -6,12 +7,50 @@
 (print (is ('(('b) b) ,a) 5))
 (print (is ('((a) a) 25) 5))
 (print (is ((leak 'a '((a) a)) 25) 25))
-
+(print (is (oif 'a 3 2) 3))
+(print (is (oif () 3 2) 2))
+(print (is (car ('((... b) b) 3 2 3)) 3))
 (print (is (car ('((... 'b) b) c a 2 q)) 'c))
 (print (is (car (car ('((... 'b) b) ,(cons 'c (cons 'a ()))))) 'c))
-(print (is (call/cc (fn (f) (f 5) 4)) 5))
-(print (is (handle-signals (fn (q) ((car q) 6)) (signal 5)) 6))
-(print (is (handle-signals (fn (q) 4) (signal 5)) 4))
-(print (is (handle-signals (fn (a) (cadr a))
-			   (handle-signals (fn (q) (unhandle-signal q)) (signal 5))) 5))
-; oddity with @ and leak. 
+(print (is (call/cc '((f) (f 5) 4)) 5))
+(print (is (handle-signals '((q) ((car q) 6)) (signal 5)) 6))
+(print (is (handle-signals '((q) (car (cdr q))) (signal 5)) 5))
+(print (is (handle-signals '((q) 4) (signal 5)) 4))
+(print (is (handle-signals 
+	    '((p) (car (cdr p)))
+	    (handle-signals '((q) (unhandle-signal q)) (signal 5)))
+ 	   5))
+
+(set! a '(car cdr if is))
+(print (closing-of a))
+(print (closing-of (closing-of a)))
+(set! b (car a))
+(print (closing-of b))
+(print (closing-of a))
+(print (closing-of (cons (car a) (cdr a))))
+
+(print 'hi)
+
+(set! poop '((list) 
+	     (print (car list))
+	     (print (cdr list))
+	     (oif list 
+		    (oif (is (car list) '...)
+			 (print 'hi)	
+			 (poop (cdr list))))))
+
+
+(poop '(3 4 5 6 7 8))
+
+;; ;; ; oddity with @ and leak. 
+(set! unlambda '((list)
+		 (oif list (oif (is (car list) '...) 
+		    	        (unlambda (cdr list))
+  			        (cons (oif (atom-p (car list)) 
+			           (car list) 
+			           (oif (is (car (car list)) 'quote)
+						(car (cdr (car list)))
+						(car (car list))))
+				      (unlambda (cdr list)))) 
+		      ())))
+

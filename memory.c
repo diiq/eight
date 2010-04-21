@@ -171,11 +171,11 @@ machine * collect()
      if (memory_a->size < garbage_check){
 	  return memory_a->first->this;
      }
-     printf("collectin', 'cause size is %d and check is %d.\n",
-	    memory_a->size,
-	    garbage_check);
-  //print_heap(memory_a);
-     // printf("collecting\n");     // allocate b
+     //printf("collectin', 'cause size is %d and check is %d.\n",
+     //	    memory_a->size,
+     //	    garbage_check);
+     //print_heap(memory_a);
+     printf("collecting\n");     // allocate b
      memory_b = malloc(sizeof(memory));
      memory_b->first = malloc(sizeof(memory_block));
      memory_b->first->this = calloc(1, BLOCK_SIZE);

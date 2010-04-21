@@ -112,7 +112,7 @@ closure *e_arg()
 
 int equal(closure *a, closure *b)
 {
-     if ((a==b) ||
+     if ((a ==b) ||
 	 (nilp(a) && nilp(b)) ||
 	 ((a->type == b->type) && (a->obj == b->obj)))
 	  return 1;
@@ -153,14 +153,12 @@ closure *cons(closure *car, closure *cdr)
 	  newcar->closing = nil();
 	  pair->cons->car = newcar;
 	  pair->cons->cdr = nil();
-	  cdr->closing = nil();
      } else if (nilp(car)){
 	  closure *newcdr = copy_closure(cdr);
 	  pair->closing = cdr->closing;
 	  newcdr->closing = nil();
 	  pair->cons->cdr = newcdr;
 	  pair->cons->car = nil();
-	  car->closing = nil();
      } else {	
 	  closure *newa = nil();
 	  closure *newb = nil();
@@ -188,27 +186,21 @@ void combine(closure *a,
 	     closure **newb,
 	     closure **ret)
 {
-     // So each closing should look like:
-     // ([(sym val . ())]* . ())
-     // So car(car( is sym;
-     // car(cdr(car is val
-     // cdr( is rest
      if (nilp(a)){ // halt condition
 	  return;
      }
      closure *seen = assoc(car(car(a)), *ret); // look for symbol
-                                               // in the new closure;
+     // in the new closure;
      if(nilp(seen)){ // if it isn't there, then check for conflicts...
-                     // look for symbol in b...
-
+	  // look for symbol in b...
 	  closure *duplicate = assoc(car(car(a)), b);
 	  if(nilp(duplicate) || 
-	     equal(car(duplicate), second(car(a)))){ 
+	     equal(second(duplicate), second(car(a)))){ 
 	       // No conflict? Then toss it in ret.
 	       *ret = cheap_cons(car(a), *ret);
 	  } else {
 	       *newa = cheap_cons(car(a), *newa);
-	       *newb = cheap_cons(cheap_cons(car(car(a)), duplicate), *newb);
+	       *newb = cheap_cons(duplicate, *newb);
 	  }
      }
      combine(cdr(a), b, newa, newb, ret); 
@@ -552,15 +544,13 @@ closure *find_free_variables(closure *code,
      if (free_varp(code, accum, current_frame)){
 	  closure* value = looker_up(code, current_frame);
 	  if (!nilp(value)){
-	       accum = cheap_cons(cheap_cons(code, 
-					     cheap_cons(car(value), 
-							nil())), accum);
+	       accum = acons(code, car(value), accum);
 	  }
      } else if (code->type == CONS_PAIR && !quotep(code)){
-	  accum = find_free_variables(code->cons->car,
+	  accum = find_free_variables(car(code),
 				      current_frame, 
 				      accum);
-	  accum = find_free_variables(code->cons->cdr, 
+	  accum = find_free_variables(cdr(code), 
 				      current_frame, 
 				      accum);
      }
@@ -571,8 +561,8 @@ closure *enclose(closure *code, frame *current_frame)
 {
      closure *ret = copy_closure(code);
      ret->closing = find_free_variables(code, 
-					current_frame, 
-					code->closing);
+				       current_frame, 
+				       code->closing);
      return ret;
 };
 
@@ -636,20 +626,20 @@ frame *new_frame(frame *below)
 
 int virtual_machine_step(machine *m)
 {
-     /* printf("\ninstruction: "); */
-     /*     if(m->current_frame->next){ */
-     /* 	  print_op(m->current_frame->next); */
-     /*    } */
-     /* if(m->accum){ */
-    /*   //	  print_stack(m->current_frame); */
-     /* 	  printf(", accum: "); */
-     /* 	  print_closure(m->accum); */
-     /*    } */
-     /*   printf("\n");   */
+/*      printf("instruction: ");  */
+/*          if(m->current_frame->next){ */
+/* 	  print_op(m->current_frame->next); */
+/*         } */
+/*      if(m->accum){  */
+/* //	  print_stack(m->current_frame);  */
+/* 	  printf(", accum: ");  */
+/* 	  print_closure(m->accum);  */
+/*         }  */
+/*       printf("\n");  */
      
-     /* print_stack(m->current_frame); */
-     /* printf("\ndon printing\n\n"); */
-     // pop/halt condition
+/*      //print_stack(m->current_frame); */
+/* //     printf("\ndon printing\n\n"); */
+/*      // pop/halt condition */
      if (m->current_frame->next == NULL){
 	  if (m->current_frame->below != NULL){
 	       m->current_frame = m->current_frame->below;

@@ -6,7 +6,9 @@
 #include "basic_commands.c"
 #include "symbols.c"
 #include "strings.c"
-  machine *m;
+#include "memory.c"
+
+machine *m;
 
 %}
 
@@ -35,10 +37,11 @@
 %%
 
 root:
-    | list                   { //print_closure((closure*)$1);
-                              return eval($1, m); } 
-    | atom                   { //print_closure((closure*)$1);
-                              return eval($1, m); }  
+| list                   { print_closure((closure*)$1);	
+                           printf("\n");
+			   m = eval($1, m); return 1;} 
+| atom                   { //print_closure((closure*)$1);
+  m = eval($1, m); return 1;}  
     | END                    { return -1; }
 
 list:
@@ -61,15 +64,14 @@ cons:
 
     
 atom:
-    QUOT atom                { $$ =  cons(symbol(QUOTE), 
-					  cons($2, nil())); }
+    QUOT atom                { $$ =  quote($2); }
     | ASTERI atom            { $$ =  cons(symbol(ASTERIX), 
 					  cons($2, nil())); }
     | ATPEN atom            { $$ =  cons(symbol(ATPEND), 
 					  cons($2, nil())); }
     | COMM atom              { $$ =  cons(symbol(COMMA), 
 					  cons($2, nil())); }
-    | NUMBE                  { $$ = fixnum($1); }
+    | NUMBE                  { $$ = number($1); }
     | SYMBO                  { $$ = symbol(string_to_symbol_id($1)); }
     | ELIPSI                 { $$ = symbol(ELIPSIS); }
     | STRIN                  { $$ = string($1); }
@@ -81,10 +83,9 @@ void set_input_source(FILE *s);
 int main( int   argc,
           char *argv[] )
 {
-     GC_INIT();
      initialize_symbol_table();
      m = init_8VM();
-     set_input_source(fopen( "eight.8", "r" ));
+     set_input_source(fopen( "test.8", "r" ));
       int rep = 0;
       while (rep != -1){
            rep = yyparse();

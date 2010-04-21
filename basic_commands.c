@@ -2,56 +2,45 @@
 #define COMMANDS_
 
 #include "eight.h"
-#include <dlfcn.h>
 
 //what actually needs to be done? the symbol needs to be registered, 
 // the lambda-list built, the arguments looked up, function made, and
 // function bound.
 
 #define make_arg(sym) symbol(string_to_symbol_id(#sym))
-#define get_arg(sym, m) looker_up(symbol(string_to_symbol_id(#sym)),	\
-					m->current_frame,		\
-					m->base_frame)    		\
+
+#define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(#sym)), \
+				      m->current_frame))     		
 
 #define intern_fn(fn_name, fn_pointer, lambda_list, m)	do {		\
-	  sym = symbol(string_to_symbol_id(#fn_name));			\
-	  sym->type = INTERNAL;						\
+          sym = new(closure);		        	      		\
+	  sym->type = BUILTIN;						\
 	  sym->builtin_fn = fn_pointer;					\
+	  sym->closing = nil();						\
+	  sym->info = nil();						\
 	  internal_set(symbol(string_to_symbol_id(#fn_name)),		\
 		       cons(lambda_list, cons(sym, nil())),		\
-		       m->current_frame,				\
-		       m->base_frame);					\
-     } while (0)
+		       m->current_frame,                                \
+                       m->base_frame);                                  \
+  } while (0)
 
  
+closure *sassy;
+
 void set_fn(machine *m)
 {
      closure *a = get_arg(a, m);
      if (a->type != SYMBOL){
-	  closure *sig = build_signal(cons(string("\n\nwere I holding a clay pot\nI could call the mouth\nan umbilical cord\n o mother-universe\n where is the child born in the kiln-fire?\n\n\nerror: I attempted to set! something that isn't a symbol: "), a), m);
-	  toss_signal(sig, m);
+       //	  closure *sig = build_signal(cons(string("\n\nHolding a clay pot\nI could call the mouth of it an umbilical cord\n o mother-universe, where is the child that was born in the kiln-fire?\n\n\nerror: I attempted to set! something that isn't a symbol: "), a), m);
+       //	  toss_signal(sig, m);
      } else {
-     closure *b = get_arg(b, m);
-     internal_set(a, b, m->current_frame, m->base_frame);
-     m->accum = b;
+       a = symbol(a->symbol_id);
+       closure *b = get_arg(b, m);
+       internal_set(a, b, m->current_frame->below, m->base_frame);
+       m->accum = b;
      }
 }
 
-
-
-int symbol_eq(closure *a, closure *b){
-     if ((a->type == SYMBOL) && (b->type == SYMBOL) &&
-	 (a->symbol_id == b->symbol_id))
-	  return 1;
-     return 0;
-};
-
-int fixnum_eq(closure *a, closure *b){
-     if ((a->type == FIXNUM) && (b->type == FIXNUM) &&
-	 (a->fixvalue == b->fixvalue))
-	  return 1;
-     return 0;
-};
 
 
 void is_fn(machine *m)
@@ -59,20 +48,17 @@ void is_fn(machine *m)
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
 
-     if ((a == b) || 
-	 fixnum_eq(a, b) || 
-	 symbol_eq(a, b) ||  // still uncertain if this is the right thing.
-	 ((a->type == NIL) && (b->type == NIL))
-	 ){
+     if (equal(a, b)) {
 	  m->accum = symbol(T);
      } else {
 	  m->accum = nil();
      }
 }
 
+
 void oif_fn(machine *m)
 {
-     operation* newop = (operation *)GC_MALLOC(sizeof(operation));
+  operation* newop = new(operation);
      newop->type = CLOSURE_OP;
      newop->next = m->current_frame->next;
      m->current_frame->next = newop;
@@ -80,8 +66,8 @@ void oif_fn(machine *m)
      closure *test = get_arg(test, m);
      closure *then = get_arg(then, m);
      closure *elser = get_arg(elser, m);
-
-     if (test->type != NIL) {
+     
+     if (!nilp(test)) {
 	  newop->closure = then;
      } else {
 	  newop->closure = elser;
@@ -98,9 +84,10 @@ void cons_fn(machine *m)
 void car_fn(machine *m)
 {
      closure *acons = get_arg(cons, m);
-     if (acons->type != CONS_PAIR && acons->type != NIL){
-	  closure *sig = build_signal(cons(string("\n\nfinding the thousand things\nreflected within the tao\nis beyond me.\n\n\nerror: I attempted to retrieve the car from something that was not a cons pair: "), acons), m);
-	  toss_signal(sig, m);
+     if (acons->type != CONS_PAIR && !nilp(acons)){
+       //	  closure *sig = build_signal(cons(string("\n\nfinding the thousand things\nreflected within the tao\nis beyond me.\n\n\nerror: I attempted to retrieve the car from something that was not a cons pair: "), acons), m);
+       //	  toss_signal(sig, m);
+       printf("Error in car_fn.");
      } else {
 	  if(acons->type == NIL){
 	       m->accum = nil();
@@ -114,8 +101,9 @@ void cdr_fn(machine *m)
 {
      closure *acons = get_arg(cons, m);
      if (acons->type != CONS_PAIR && acons->type != NIL){
-	  closure *sig = build_signal(cons(string("\n\nleaves rot on the warm dirt\nwhile the tree drinks rain\n he is not naked\n\n\nerror: I attempted to retrieve the cdr from something that is not a cons pair: "), acons), m);
-	  toss_signal(sig, m);
+       //	  closure *sig = build_signal(cons(string("\n\nleaves rot on the warm dirt\nwhile the tree drinks rain\n he is not naked\n\n\nerror: I attempted to retrieve the cdr from something that is not a cons pair: "), acons), m);
+       // toss_signal(sig, m);
+       printf("error in cdr_fn");
      } else {
 	  if(acons->type == NIL){
 	       m->accum = nil();
@@ -148,30 +136,36 @@ void prmachine_fn(machine *m)
     print_stack(m->base_frame);
 }
 
+void closing_of_fn(machine *m)
+{
+     closure *a = get_arg(a, m);
+     m->accum = a->closing;
+}
+
 void leak_fn(machine *m)
 {
      closure *sym = get_arg(sym, m);
-     if (sym->type != SYMBOL && sym->type != NIL){
-	  closure *sig = build_signal(cons(string("\n\nI cannot speak about rhymes\nwhen the juice of the orange\nis still dripping from my chin\n\n\nerror: I attempted to leak something that isn't a symbol: "), sym), m);
-
-	  print_closure(sym);
-	  printf("\n");
+     if (sym->type != SYMBOL && !nilp(sym)){
+       //closure *sig = build_signal(cons(string("\n\nI cannot speak about rhymes\nwhen the juice of the orange\nis still dripping from my chin\n\n\nerror: I attempted to leak something that isn't a symbol: "), sym), m);
+         printf("You leaked a non symbol, man \n");
 	  //print_closure((closure *) 5);
-	  toss_signal(sig, m);
+	 //	  toss_signal(sig, m);
      } else {
-	  closure *clos = get_arg(closure, m);
-	  closure *ret = (closure *)GC_MALLOC(sizeof(closure));
-	  ret->type = clos->type;
-	  ret->value = clos->value;
-	  ret->annotation = clos->annotation;
-	  ret->closed = remove_sym(sym->symbol_id, clos->closed);  
-	  m->accum = ret;
+          closure *clos = copy_closure(get_arg(closure, m));
+	  closure *isit = assoc(sym, clos->closing);
+	  if (!nilp(isit)){
+                isit->cons->car = symbol(LEAKED);
+	  } else {
+	        clos->closing = acons(sym, symbol(LEAKED), clos->closing);
+	  }
+	  // TODO THINGS OH MY GOD
+	  m->accum = clos;
      }
 }
 
 void comma_fn(machine *m)
 {     
-     operation* newop = (operation *)GC_MALLOC(sizeof(operation));
+  operation* newop = new(operation);
      closure *clos = get_arg(closure, m);
      newop->next = m->current_frame->next;
      newop->type = CLOSURE_OP;
@@ -182,17 +176,17 @@ void comma_fn(machine *m)
 void callcc_fn(machine *m)
 {    
      closure *fn = get_arg(fn, m);
-     closure *ret = (closure *)GC_MALLOC(sizeof(closure));
+     closure *ret = new(closure);
      ret->type = CONTINUATION;
+     ret->closing = nil();
      ret->mach = stack_copy(m);
      // (quote ((a) ret))
-     closure *cont = cons(quote(),
-			    cons(cons(cons(make_arg(a),  nil()),
-				      cons(ret, nil())),
-				 nil()));
+     closure *cont = quote(cons(cons(make_arg(a),  nil()),
+				cons(ret, nil())));
+
      closure *call = cons(fn, cons(cont, nil()));
 
-     operation* newop = (operation *)GC_MALLOC(sizeof(operation));
+     operation* newop = new(operation);
      newop->next = m->current_frame->next;
      newop->type = CLOSURE_OP;
      newop->closure = call;
@@ -209,8 +203,7 @@ frame *find_signal_handler(frame *f){
 
 void toss_signal(closure* sig, machine* m)
 {
-     frame *fm =  find_signal_handler(m->current_frame);
-
+     frame *fm = find_signal_handler(m->current_frame);
      if (fm == NULL) {
 	  printf("No handler.\n");
 	  m->current_frame = m->base_frame;
@@ -222,7 +215,7 @@ void toss_signal(closure* sig, machine* m)
      
      sig = cons(fn, cons(sig, nil()));
 
-     operation* newop = (operation *)GC_MALLOC(sizeof(operation));
+     operation* newop = new(operation);
      newop->next = m->current_frame->next;
      newop->type = CLOSURE_OP;
      newop->closure = sig;
@@ -231,14 +224,15 @@ void toss_signal(closure* sig, machine* m)
 
 closure * build_signal(closure *a, machine *m)
 {
-     closure *ret = (closure *)GC_MALLOC(sizeof(closure));
+     closure *ret = new(closure);
      ret->type = CONTINUATION;
      ret->mach = stack_copy(m);
+     ret->closing = nil();
      // (quote ((a) ret))
      closure *cont = cons(cons(make_arg(a),  nil()),
 			  cons(ret, nil()));
      cont = cons(cont, cons(a, nil()));
-     cont = cons(quote(), cons(cont, nil()));
+     cont = quote(cont);
      return cont;
 }
 
@@ -251,21 +245,22 @@ void signal_fn(machine *m)
 void unhandle_signal(machine *m)
 {
      closure *a = get_arg(sig, m);
-     m->current_frame = m->current_frame->below->below; // to remove the current handler
-     toss_signal(cons(quote(), cons(a, nil())), m);
+     m->current_frame = find_signal_handler(m->current_frame);
+     m->current_frame = m->current_frame->below; // to remove the current handler
+     toss_signal(quote(a), m);
 }
 
 void add_handler(machine *m){     
      closure *handler = get_arg(handler, m);
      m->current_frame->signal_handler = handler;
-
-     operation* newop = (operation *)GC_MALLOC(sizeof(operation));
+     operation* newop = new(operation);
      closure *body = get_arg(body, m);
      newop->next = m->current_frame->next;
      newop->type = CLOSURE_OP;
      newop->closure = body;
      m->current_frame->next = newop;
 }
+
 void base_handler(machine *m){     
      closure *handler = get_arg(handler, m);
      m->base_frame->signal_handler = handler;
@@ -279,27 +274,27 @@ void base_handler(machine *m){
 void plus_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     m->accum = fixnum(a->fixvalue + b->fixvalue);
+     m->accum = number(a->num + b->num);
 }
 void minus_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     m->accum = fixnum(a->fixvalue - b->fixvalue);
+     m->accum = number(a->num - b->num);
 }
 void multiply_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     m->accum = fixnum(a->fixvalue * b->fixvalue);
+     m->accum = number(a->num * b->num);
 }
 void divide_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     m->accum = fixnum(a->fixvalue / b->fixvalue);
+     m->accum = number(a->num / b->num);
 }
 void greater_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     if (a->fixvalue > b->fixvalue)
+     if (a->num > b->num)
        m->accum = symbol(T);
      else 
        m->accum = nil();
@@ -307,11 +302,15 @@ void greater_fn(machine *m){
 void less_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     if (a->fixvalue < b->fixvalue)
+     if (a->num < b->num)
        m->accum = symbol(T);
      else 
        m->accum = nil();
 }
+
+void id_fn(machine *m){
+     m->accum = get_arg(a, m);
+};
 
 //------------------------------- FFI --------------------------------//
 
@@ -367,18 +366,23 @@ void new_basic_commands(machine *m)
 {	  
     // TODO This is still more complicated than it should be.
      closure *sym;
-     
-     intern_fn(is, &is_fn, cons(make_arg(a), 
-				cons(make_arg(b), nil())), m);
-     intern_fn(set!, &set_fn, cons(cons(symbol(QUOTE), 
-					cons(make_arg(a), nil())), 
+     closure *lam = cons(make_arg(a), nil());
+     closure *a = make_arg(a);
+     closure *b = make_arg(b);
+     closure *c = cons(make_arg(b), nil());
+     closure *d = cons(a, c);
+
+
+     intern_fn(is, &is_fn, d, m);
+  
+     intern_fn(set!, &set_fn, cons(quote(make_arg(a)), 
 				   cons(make_arg(b), nil())), m);
      intern_fn(oif, &oif_fn, cons(
 		    make_arg(test), //arg
 		    cons( //cons
-			 cons(symbol(QUOTE), cons(make_arg(then), nil())),//arg
+			 quote(make_arg(then)),//arg
 			 cons( //<--cons                  vv arg vv
-			      cons(symbol(QUOTE), cons(make_arg(elser), nil())), 
+			      quote(make_arg(elser)), 
 			      nil()))), m); // nil
 
      intern_fn(cons, &cons_fn, cons(make_arg(car), 
@@ -394,24 +398,28 @@ void new_basic_commands(machine *m)
 
      intern_fn(leak, &leak_fn, cons(make_arg(sym), 
 				cons(make_arg(closure), nil())), m);
+
+     intern_fn(closing-of, &closing_of_fn, cons(make_arg(a), nil()), m);
         
      intern_fn(comma, &comma_fn, cons(make_arg(closure),  nil()), m);
    
      intern_fn(prmachine, &prmachine_fn, nil(), m);
 
-     intern_fn(call/cc, &callcc_fn, cons(cons(symbol(QUOTE), cons(make_arg(fn),  nil())), nil()), m);
+     intern_fn(call/cc, &callcc_fn, 
+	       cons(quote(make_arg(fn)), nil()), m);
 
      intern_fn(signal, &signal_fn, cons(make_arg(sig),  nil()), m);
 
-     intern_fn(handle-signals, &add_handler, cons(cons(symbol(QUOTE), cons(make_arg(handler), nil())),
-						cons(cons(symbol(QUOTE), 
-							  cons(make_arg(body), nil())), nil())), m);  
-     intern_fn(base-signal-handler, &base_handler, cons(cons(symbol(QUOTE), 
-							    cons(make_arg(handler), nil())), 
-						       nil()), m);  
+     intern_fn(handle-signals, 
+	       &add_handler, 
+	       cons(quote(make_arg(handler)),  
+		    cons(quote(make_arg(body)), nil())), m);
 
-     intern_fn(unhandle-signal, &unhandle_signal, cons(make_arg(sig),  nil()), m);
+     intern_fn(unhandle-signal, &unhandle_signal, 
+	       cons(make_arg(sig),  nil()), m);
 
+     intern_fn(base-signal-handler, &base_handler, 
+	       cons(quote(make_arg(handler)),  nil()), m);
      //maths
 
      intern_fn(plus, &plus_fn, cons(make_arg(a), 
@@ -423,9 +431,11 @@ void new_basic_commands(machine *m)
      intern_fn(divide, &divide_fn, cons(make_arg(a), 
 					cons(make_arg(b), nil())), m);
      intern_fn(>, &greater_fn, cons(make_arg(a), 
-					cons(make_arg(b), nil())), m);
+				    cons(make_arg(b), nil())), m);
      intern_fn(<, &less_fn, cons(make_arg(a), 
-					cons(make_arg(b), nil())), m);
+				 cons(make_arg(b), nil())), m);
 }    
 
 #endif
+ 
+

@@ -2,9 +2,10 @@
 
 closure* character(char a)
 {
-     closure *ret = (closure *)GC_MALLOC(sizeof(closure));
+     closure *ret = new(closure);
      ret->type = CHARACTER;
-     ret->charvalue = a;
+     ret->character = a;
+     ret->closing = nil();
      return ret;
 }
 
@@ -24,7 +25,7 @@ int stringp(closure *a)
 
 int stringp_internal(closure *a)
 {
-     if (a->type == NIL)
+     if (!nilp(a))
 	  return 1;
      if ((a->type == CONS_PAIR) && (car(a)->type == CHARACTER))
 	  return stringp_internal(cdr(a));

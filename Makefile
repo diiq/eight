@@ -4,5 +4,5 @@ SHELL = /bin/sh
 # order to compile.
 
 all:
-	byacc -d yacc.yacc; flex lexer.lex
-	gcc lex.yy.c -I/usr/include/gc/ -lm -lgc -o eight
+	yacc -d yacc.yacc; flex lexer.lex
+	gcc lex.yy.c -I/usr/include/gc/ -lm -o eight

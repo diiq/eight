@@ -1,13 +1,12 @@
 ; hi! If you're reading this to learn about eight, I suggest skipping the 
 ; following 4 functions, until you're more comfortable with the language.
-; If you feal comfortable with the 8 function 'leak', and the behavior of
-; 8's semiotic programming features, then by all means, dive in. Otherwise,
+; If you feal comfortable with the Eight function 'leak', and the behavior of
+; Eight's semiotic programming features, then by all means, dive in. Otherwise,
 ; skip to 'do', and work from there. Good luck!
 ;
 ; --s
 ;
-
-(base-signal-handler '((q)  (print q) ()))
+(base-signal-handler '((q) (print q)))
 
 (set! unlambda '((list)
 		 (oif list (oif (is (car list) '...) 
@@ -25,6 +24,9 @@
  
 (set! fn '(('lambda-list ... 'code)
 	   (cons lambda-list (leak-all (unlambda lambda-list) code))))
+
+
+;-----------------------------------------------------------;
 
 
 (set! do (fn (... 'evals)
