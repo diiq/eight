@@ -10,11 +10,12 @@
 
 #include "eight.h"
 
-#define BLOCK_SIZE 1048576
+#define BLOCK_SIZE 1024
 
 memory *memory_a;
 memory *memory_b;
-int garbage_check = 4;
+int garbage_check = 0;
+closure *the_nil;
 
 machine * init_memory()
 {
@@ -27,45 +28,58 @@ machine * init_memory()
      memory_a->current = malloc(sizeof(memory_location));
      memory_a->current->block = memory_a->first;
      memory_a->current->offset = 0;
-     memory_a->size = 0;
+     memory_a->size = 1;
 
      memory_a->from = malloc(sizeof(memory_location));
 
      machine *memory_root = allocate(sizeof(machine));
      memory_root->type = MACHINE;
+     the_nil = allocate(sizeof(closure));
+     the_nil->type = NIL;
+     the_nil->closing = the_nil;
+     the_nil->info = the_nil;
 
      return memory_root;
 }
 
-void *current_location(memory *m) 
+closure *nil()
+{ 
+  return the_nil;
+};
+
+void *current_location(memory *mem) 
 {
-     return (m->current->block->this+m->current->offset);
+     return (mem->current->block->this+mem->current->offset);
 }
 
-void *from_location(memory *m) 
+void *from_location(memory *mem) 
 {
-     return (m->from->block->this+m->from->offset);
+     return (mem->from->block->this+mem->from->offset);
 }
 
-void next_reference(memory *m)
+void next_reference(memory *mem)
 {      
      //    printf("read from %d to %d\n", 
 //	    m->from->offset, 
 //	    mysizeof(from_location(m))+m->from->offset);
-     if (m->from->offset == -1) // this means we're at the end of the heap
+     if (mem->from->offset == -1) // this means we're at the end of the heap
 	  return;
 
-     m->from->offset += mysizeof(from_location(m));
+     mem->from->offset += mysizeof(from_location(mem));
      
-     if(*(obj_type *)from_location(m) == 0 ||
-	  m->from->offset >= BLOCK_SIZE){ // there's nothing left 
+     if(*(obj_type *)from_location(mem) == 0 ||
+	  mem->from->offset >= BLOCK_SIZE){ // there's nothing left 
 	                                     //in this block...
-	  if (m->from->block->next != NULL){
+	  if (mem->from->block->next != NULL){
+	       	  if (mem->from->block->next->this == NULL){
+		       error(1, 1, "The next block has a null this!");
+		  }
+
 	       // if there's another block,
-	       m->from->block = m->from->block->next;
-	       m->from->offset = 0;
+	       mem->from->block = mem->from->block->next;
+	       mem->from->offset = 0;
 	  } else {
-	       m->from->offset = -1; //we're out of heap.
+	       mem->from->offset = -1; //we're out of heap.
 	  }
      }	  
 }
@@ -77,7 +91,13 @@ void *allocatery(memory *mo, int size)
 
      if ((mo->current->offset + size) >= BLOCK_SIZE){
 	  memory_block* block = calloc(1, sizeof(memory_block));
+	  if (block == NULL){
+	       error(1, 1, "You went and failed to allocate a block of memory!");
+	  }
 	  block->this = calloc(1, BLOCK_SIZE);
+	  if (block->this == NULL){
+	       error(1234567, 1234567, "You went and failed to allocate a block of memory!");
+	  }
 	  mo->current->block->next = block;
 	  mo->current->block = block;
 	  mo->current->offset = 0;
@@ -175,7 +195,6 @@ machine * collect()
      //	    memory_a->size,
      //	    garbage_check);
      //print_heap(memory_a);
-     printf("collecting\n");     // allocate b
      memory_b = malloc(sizeof(memory));
      memory_b->first = malloc(sizeof(memory_block));
      memory_b->first->this = calloc(1, BLOCK_SIZE);
@@ -186,16 +205,16 @@ machine * collect()
      memory_b->from = malloc(sizeof(memory_location));
      memory_b->from->block = memory_b->first;
      memory_b->from->offset = 0;
-     memory_b->size = 0;
+     memory_b->size = 1;
      // copy machine
      repair_reference(memory_a->first->this);
+     the_nil = repair_reference(the_nil);
      // collectify
      collectify();
           
      // free old memory
      free_memory(memory_a);
      memory_a = memory_b;
-     // printf("collected\n");     
      // return new machine
      //     print_heap(memory_a);
      garbage_check = memory_a->size * 2;
@@ -209,41 +228,42 @@ void collectify()
      
      void *location = from_location(memory_b);
      obj_type type = *(obj_type*)(location);
-    if (type == NIL       ||	
+     if (type == NIL       ||	
 	type == NUMBER    || 
 	type == INTERNAL  || 	 
 	type == CHARACTER ||
 	type == SYMBOL    ||
 	type == BUILTIN   || 
 	type == C_OBJECT) {
-      	 // printf("collecting a non-reference closure\n");
+      //  printf("collecting a non-reference closure\n");
 	 closure *it =  ((closure *)(location));
 	 it->closing = repair_reference(it->closing);
 	 it->info = repair_reference(it->info);
     } else if (type == CONS_PAIR) {
-       // printf("collecting a cons pair\n");
+      //printf("collecting a cons pair\n");
 	 closure *it =  ((closure *)(location));
 	 it->cons = repair_reference(it->cons);
 	 it->closing = repair_reference(it->closing);
 	 it->info = repair_reference(it->info);
     } else if (type == CONS_CELL) {
-      // printf("collecting a cell\n");
+      //printf("collecting a cell\n");
 	 cons_cell *it = ((cons_cell *)(location));
 	 it->car = repair_reference(it->car);
 	 it->cdr = repair_reference(it->cdr);
     } else if (type == CONTINUATION) {
+//      printf("collecting a continuation\n");
 	 closure *it = ((closure *)(location));
 	 it->mach = repair_reference(it->mach);
 	 it->closing = repair_reference(it->closing);
 	 it->info = repair_reference(it->info);	 
     } else if (type == MACHINE){
-       // printf("collecting a machine\n");
+	  //      printf("collecting a machine\n");
 	 machine *it = ((machine *)(location));
 	 it->current_frame = repair_reference(it->current_frame);
 	 it->base_frame = repair_reference(it->base_frame);
 	 it->accum = repair_reference(it->accum);
     } else if (type == FRAME){
-       // printf("collecting a frame\n");
+      //printf("collecting a frame\n");
 	 frame *it = ((frame *)(location));
 	 it->next = repair_reference(it->next);
 	 it->rib = repair_reference(it->rib);
@@ -252,7 +272,7 @@ void collectify()
 	 it->below = repair_reference(it->below);
     } else if (type == CLOSURE_OP ||
 	       type == MACHINE_FLAG){
-	 // printf("collecting an operation\n");
+      // printf("collecting an operation\n");
 	 operation *it = ((operation *)(location));
 	 it->closure = repair_reference(it->closure);
 	 it->next = repair_reference(it->next);

@@ -47,30 +47,30 @@ root:
 list:
     OPEN cons CLOSE          { $$ = $2; }
     | OPEN CLOSE             { $$ = nil();}
-    | QUOT list              { $$ = cons(symbol(QUOTE), 
-					 cons($2, nil())); }
-    | ASTERI list            { $$ = cons(symbol(ASTERIX), 
-					 cons($2, nil())); }
-    | ATPEN list            { $$ = cons(symbol(ATPEND), 
-					 cons($2, nil())); }
-    | COMM list              { $$ = cons(symbol(COMMA), 
-					 cons($2, nil())); }
+    | QUOT list              { $$ = cheap_cons(symbol(QUOTE), 
+					 cheap_cons($2, nil())); }
+    | ASTERI list            { $$ = cheap_cons(symbol(ASTERIX), 
+					 cheap_cons($2, nil())); }
+    | ATPEN list            { $$ = cheap_cons(symbol(ATPEND), 
+					 cheap_cons($2, nil())); }
+    | COMM list              { $$ = cheap_cons(symbol(COMMA), 
+					 cheap_cons($2, nil())); }
 
 cons: 
-    atom cons                { $$ = cons($1, $2);} 
-    | list cons              { $$ = cons($1, $2);} 
-    | list                   { $$ = cons($1, nil()); }
-    | atom                   { $$ = cons($1, nil()); }
+    atom cons                { $$ = cheap_cons($1, $2);} 
+    | list cons              { $$ = cheap_cons($1, $2);} 
+    | list                   { $$ = cheap_cons($1, nil()); }
+    | atom                   { $$ = cheap_cons($1, nil()); }
 
     
 atom:
     QUOT atom                { $$ =  quote($2); }
-    | ASTERI atom            { $$ =  cons(symbol(ASTERIX), 
-					  cons($2, nil())); }
-    | ATPEN atom            { $$ =  cons(symbol(ATPEND), 
-					  cons($2, nil())); }
-    | COMM atom              { $$ =  cons(symbol(COMMA), 
-					  cons($2, nil())); }
+    | ASTERI atom            { $$ =  cheap_cons(symbol(ASTERIX), 
+					  cheap_cons($2, nil())); }
+    | ATPEN atom            { $$ =  cheap_cons(symbol(ATPEND), 
+					  cheap_cons($2, nil())); }
+    | COMM atom              { $$ =  cheap_cons(symbol(COMMA), 
+					  cheap_cons($2, nil())); }
     | NUMBE                  { $$ = number($1); }
     | SYMBO                  { $$ = symbol(string_to_symbol_id($1)); }
     | ELIPSI                 { $$ = symbol(ELIPSIS); }
@@ -85,7 +85,7 @@ int main( int   argc,
 {
      initialize_symbol_table();
      m = init_8VM();
-     set_input_source(fopen( "test.8", "r" ));
+     set_input_source(fopen( "eight.8", "r" ));
       int rep = 0;
       while (rep != -1){
            rep = yyparse();

@@ -20,11 +20,14 @@ void print_closure(closure *a)
      } else if (a->type == NIL){
 	  printf("()");
      } // else {
-       //  printf("v%d", (int)a->obj);
+     // printf("v%d", (int)a->obj);
      //}
-     //printf("[");
-     // print_assoc(a->closed);
-     //printf("]");
+    
+     //  if(!nilp(a->closing)){
+     // printf("[");
+     //  print_closure(a->closing);
+     // printf("]");
+     //}
 }
 
 void print_cons(closure *cons)

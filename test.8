@@ -21,36 +21,3 @@
 	    (handle-signals '((q) (unhandle-signal q)) (signal 5)))
  	   5))
 
-(set! a '(car cdr if is))
-(print (closing-of a))
-(print (closing-of (closing-of a)))
-(set! b (car a))
-(print (closing-of b))
-(print (closing-of a))
-(print (closing-of (cons (car a) (cdr a))))
-
-(print 'hi)
-
-(set! poop '((list) 
-	     (print (car list))
-	     (print (cdr list))
-	     (oif list 
-		    (oif (is (car list) '...)
-			 (print 'hi)	
-			 (poop (cdr list))))))
-
-
-(poop '(3 4 5 6 7 8))
-
-;; ;; ; oddity with @ and leak. 
-(set! unlambda '((list)
-		 (oif list (oif (is (car list) '...) 
-		    	        (unlambda (cdr list))
-  			        (cons (oif (atom-p (car list)) 
-			           (car list) 
-			           (oif (is (car (car list)) 'quote)
-						(car (cdr (car list)))
-						(car (car list))))
-				      (unlambda (cdr list)))) 
-		      ())))
-

@@ -192,7 +192,7 @@ int main( int   argc,
 {
      initialize_symbol_table();
      m = init_8VM();
-     set_input_source(fopen( "test.8", "r" ));
+     set_input_source(fopen( "eight.8", "r" ));
       int rep = 0;
       while (rep != -1){
            rep = yyparse();
@@ -455,39 +455,39 @@ case 6:
 break;
 case 7:
 #line 50 "yacc.yacc"
-	{ yyval.clos = cons(symbol(QUOTE), 
-					 cons(yyvsp[0].clos, nil())); }
+	{ yyval.clos = cheap_cons(symbol(QUOTE), 
+					 cheap_cons(yyvsp[0].clos, nil())); }
 break;
 case 8:
 #line 52 "yacc.yacc"
-	{ yyval.clos = cons(symbol(ASTERIX), 
-					 cons(yyvsp[0].clos, nil())); }
+	{ yyval.clos = cheap_cons(symbol(ASTERIX), 
+					 cheap_cons(yyvsp[0].clos, nil())); }
 break;
 case 9:
 #line 54 "yacc.yacc"
-	{ yyval.clos = cons(symbol(ATPEND), 
-					 cons(yyvsp[0].clos, nil())); }
+	{ yyval.clos = cheap_cons(symbol(ATPEND), 
+					 cheap_cons(yyvsp[0].clos, nil())); }
 break;
 case 10:
 #line 56 "yacc.yacc"
-	{ yyval.clos = cons(symbol(COMMA), 
-					 cons(yyvsp[0].clos, nil())); }
+	{ yyval.clos = cheap_cons(symbol(COMMA), 
+					 cheap_cons(yyvsp[0].clos, nil())); }
 break;
 case 11:
 #line 60 "yacc.yacc"
-	{ yyval.clos = cons(yyvsp[-1].clos, yyvsp[0].clos);}
+	{ yyval.clos = cheap_cons(yyvsp[-1].clos, yyvsp[0].clos);}
 break;
 case 12:
 #line 61 "yacc.yacc"
-	{ yyval.clos = cons(yyvsp[-1].clos, yyvsp[0].clos);}
+	{ yyval.clos = cheap_cons(yyvsp[-1].clos, yyvsp[0].clos);}
 break;
 case 13:
 #line 62 "yacc.yacc"
-	{ yyval.clos = cons(yyvsp[0].clos, nil()); }
+	{ yyval.clos = cheap_cons(yyvsp[0].clos, nil()); }
 break;
 case 14:
 #line 63 "yacc.yacc"
-	{ yyval.clos = cons(yyvsp[0].clos, nil()); }
+	{ yyval.clos = cheap_cons(yyvsp[0].clos, nil()); }
 break;
 case 15:
 #line 67 "yacc.yacc"
@@ -495,18 +495,18 @@ case 15:
 break;
 case 16:
 #line 68 "yacc.yacc"
-	{ yyval.clos =  cons(symbol(ASTERIX), 
-					  cons(yyvsp[0].clos, nil())); }
+	{ yyval.clos =  cheap_cons(symbol(ASTERIX), 
+					  cheap_cons(yyvsp[0].clos, nil())); }
 break;
 case 17:
 #line 70 "yacc.yacc"
-	{ yyval.clos =  cons(symbol(ATPEND), 
-					  cons(yyvsp[0].clos, nil())); }
+	{ yyval.clos =  cheap_cons(symbol(ATPEND), 
+					  cheap_cons(yyvsp[0].clos, nil())); }
 break;
 case 18:
 #line 72 "yacc.yacc"
-	{ yyval.clos =  cons(symbol(COMMA), 
-					  cons(yyvsp[0].clos, nil())); }
+	{ yyval.clos =  cheap_cons(symbol(COMMA), 
+					  cheap_cons(yyvsp[0].clos, nil())); }
 break;
 case 19:
 #line 74 "yacc.yacc"

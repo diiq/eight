@@ -31,8 +31,8 @@ void set_fn(machine *m)
 {
      closure *a = get_arg(a, m);
      if (a->type != SYMBOL){
-       //	  closure *sig = build_signal(cons(string("\n\nHolding a clay pot\nI could call the mouth of it an umbilical cord\n o mother-universe, where is the child that was born in the kiln-fire?\n\n\nerror: I attempted to set! something that isn't a symbol: "), a), m);
-       //	  toss_signal(sig, m);
+       closure *sig = build_signal(cons(string("\n\nHolding a clay pot\nI could call the mouth of it an umbilical cord\n o mother-universe, where is the child that was born in the kiln-fire?\n\n\nerror: I attempted to set! something that isn't a symbol: "), cons(a, nil())), m);
+       	  toss_signal(sig, m);
      } else {
        a = symbol(a->symbol_id);
        closure *b = get_arg(b, m);
@@ -85,9 +85,8 @@ void car_fn(machine *m)
 {
      closure *acons = get_arg(cons, m);
      if (acons->type != CONS_PAIR && !nilp(acons)){
-       //	  closure *sig = build_signal(cons(string("\n\nfinding the thousand things\nreflected within the tao\nis beyond me.\n\n\nerror: I attempted to retrieve the car from something that was not a cons pair: "), acons), m);
-       //	  toss_signal(sig, m);
-       printf("Error in car_fn.");
+       closure *sig = build_signal(cons(string("\n\nfinding the thousand things\nreflected within the tao\nis beyond me.\n\n\nerror: I attempted to retrieve the car from something that was not a cons pair: "), cons(acons, nil())), m);
+       toss_signal(sig, m);
      } else {
 	  if(acons->type == NIL){
 	       m->accum = nil();
@@ -101,9 +100,8 @@ void cdr_fn(machine *m)
 {
      closure *acons = get_arg(cons, m);
      if (acons->type != CONS_PAIR && acons->type != NIL){
-       //	  closure *sig = build_signal(cons(string("\n\nleaves rot on the warm dirt\nwhile the tree drinks rain\n he is not naked\n\n\nerror: I attempted to retrieve the cdr from something that is not a cons pair: "), acons), m);
-       // toss_signal(sig, m);
-       printf("error in cdr_fn");
+       closure *sig = build_signal(cons(string("\n\nleaves rot on the warm dirt\nwhile the tree drinks rain\n he is not naked\n\n\nerror: I attempted to retrieve the cdr from something that is not a cons pair: "), cons(acons, nil())), m);
+       toss_signal(sig, m);
      } else {
 	  if(acons->type == NIL){
 	       m->accum = nil();
@@ -136,6 +134,11 @@ void prmachine_fn(machine *m)
     print_stack(m->base_frame);
 }
 
+void start_debug_fn(machine *m)
+{
+     DEBUG = 1;
+}
+
 void closing_of_fn(machine *m)
 {
      closure *a = get_arg(a, m);
@@ -146,19 +149,19 @@ void leak_fn(machine *m)
 {
      closure *sym = get_arg(sym, m);
      if (sym->type != SYMBOL && !nilp(sym)){
-       //closure *sig = build_signal(cons(string("\n\nI cannot speak about rhymes\nwhen the juice of the orange\nis still dripping from my chin\n\n\nerror: I attempted to leak something that isn't a symbol: "), sym), m);
-         printf("You leaked a non symbol, man \n");
+       closure *sig = build_signal(cons(string("\n\nHow can I forget\nthe juice of the orange\nthat is still dripping from my chin\n\n\nerror: I attempted to leak something that isn't a symbol: "), cons(sym, nil())), m);
+       //  printf("You leaked a non symbol, man \n");
 	  //print_closure((closure *) 5);
-	 //	  toss_signal(sig, m);
+       toss_signal(sig, m);
      } else {
           closure *clos = copy_closure(get_arg(closure, m));
 	  closure *isit = assoc(sym, clos->closing);
 	  if (!nilp(isit)){
                 isit->cons->car = symbol(LEAKED);
 	  } else {
-	        clos->closing = acons(sym, symbol(LEAKED), clos->closing);
+	        clos->closing = cheap_acons(sym, symbol(LEAKED), clos->closing);
 	  }
-	  // TODO THINGS OH MY GOD
+	  // TODO
 	  m->accum = clos;
      }
 }
@@ -213,10 +216,9 @@ void toss_signal(closure* sig, machine* m)
      m->current_frame = fm;
      closure *fn = m->current_frame->signal_handler;
      
-     sig = cons(fn, cons(sig, nil()));
+     sig = cheap_cons(fn, cheap_cons(sig, nil()));
 
      operation* newop = new(operation);
-     newop->next = m->current_frame->next;
      newop->type = CLOSURE_OP;
      newop->closure = sig;
      m->current_frame->next = newop;
@@ -231,7 +233,7 @@ closure * build_signal(closure *a, machine *m)
      // (quote ((a) ret))
      closure *cont = cons(cons(make_arg(a),  nil()),
 			  cons(ret, nil()));
-     cont = cons(cont, cons(a, nil()));
+     cont = cheap_cons(cont, cons(a, nil()));
      cont = quote(cont);
      return cont;
 }
@@ -404,6 +406,8 @@ void new_basic_commands(machine *m)
      intern_fn(comma, &comma_fn, cons(make_arg(closure),  nil()), m);
    
      intern_fn(prmachine, &prmachine_fn, nil(), m);
+
+     intern_fn(start-debug, &start_debug_fn, nil(), m);
 
      intern_fn(call/cc, &callcc_fn, 
 	       cons(quote(make_arg(fn)), nil()), m);

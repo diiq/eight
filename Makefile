@@ -5,4 +5,4 @@ SHELL = /bin/sh
 
 all:
 	yacc -d yacc.yacc; flex lexer.lex
-	gcc lex.yy.c -I/usr/include/gc/ -lm -o eight
+	gcc lex.yy.c -I/usr/include/gc/ -lm -o eight -g

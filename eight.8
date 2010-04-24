@@ -6,7 +6,7 @@
 ;
 ; --s
 ;
-(base-signal-handler '((q) (print q)))
+(base-signal-handler '((q) (print (cdr q))))
 
 (set! unlambda '((list)
 		 (oif list (oif (is (car list) '...) 
@@ -209,7 +209,7 @@
 
 (def nthcdr (n xs)
   (if (no n) xs
-      (> n 0) (nthcdr (- n 1) (cdr xs))
+      (> n 0) (nthcdr (minus n 1) (cdr xs))
       xs))
 
 (def tuples (xs (n 2))

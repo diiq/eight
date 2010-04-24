@@ -4,6 +4,8 @@
 #define new(x) (x *)allocate(sizeof(x));
 //#define new(x) (x *)calloc(1, sizeof(x));
 
+int DEBUG = 0;
+
 typedef struct closure_struct closure;
 typedef int symbol_id;
 typedef struct operation_struct operation;
@@ -151,9 +153,14 @@ void combine(closure *a,
 	     closure **newa, 
 	     closure **newb,
 	     closure **ret);
+closure *cheap_car(closure *x);
+closure *cheap_cdr(closure *x);
+closure *rectify_closing_i(closure *closed, closure *closing, closure *ret);
 closure *car(closure *x);
 closure *cdr(closure *x);
 closure *second(closure* list);
+closure *rectify_closing(closure *closed);
+closure *cheap_acons(closure *sym, closure *val, closure *closing);
 closure *assoc(closure *sym, closure *closing);
 closure *append(closure *a, closure *b);
 
@@ -204,6 +211,10 @@ void print_op(operation* ins);
 void print_machine(machine *m);
 void new_basic_commands(machine *m);
 
+
+void toss_signal(closure* sig, machine* m);
+closure * build_signal(closure *a, machine *m);
+closure *string(char * str);
 // builtins
 /*
 read

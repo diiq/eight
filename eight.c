@@ -57,14 +57,6 @@ closure *e_argument()
 }
 
 
-closure *nil() 
-{
-     closure *anil = new(closure);
-     anil->type = NIL;
-     anil->closing = anil;
-     return anil;
-}
-
 int nilp(closure *x)
 {
      if(x->type == NIL) return 1;
@@ -83,7 +75,7 @@ closure *symbol(symbol_id id)
 
 int leakedp(closure *x)
 {
-     closure *y = car(x);
+     closure *y = cheap_car(x);
      if(y->type == SYMBOL && y->symbol_id == LEAKED) return 1;
   return 0;
 }
@@ -214,17 +206,57 @@ void combine(closure *a,
      combine(cdr(a), b, newa, newb, ret); 
 }
 
+
+closure *rectify_closing(closure *closed)
+{
+     closed->closing = rectify_closing_i(closed, closed->closing, nil());
+     return closed;
+}
+
+closure *rectify_closing_i(closure *closed, closure *closing, closure *ret)
+{
+     if (closed->type == SYMBOL){
+	  closure* value = assoc(closed, closing);
+	  if (!nilp(value)){
+	       ret = cheap_acons(closed,
+				 value->cons->car, 
+				 ret);
+	  }
+     } else if (closed->type == CONS_PAIR && !quotep(closed)){
+	  ret = rectify_closing_i(closed->cons->car,
+				  closing,
+				  ret);
+	  ret = rectify_closing_i(closed->cons->cdr, 
+				  closing,
+				  ret);
+     }
+     return ret;
+}
+
+closure *cheap_car(closure *x)
+{
+     if (nilp(x)) return x;
+     return x->cons->car;
+}
+
+closure *cheap_cdr(closure *x)
+{
+     if (nilp(x)) return x;
+     return x->cons->cdr;
+}
 	       
 closure *car(closure *x)
 {
      if (nilp(x)) return x;
      //if (x->type != CONS_PAIR) return NULL;
      if (nilp(x->closing)){
-	  return x->cons->car;
+	  return copy_closure(x->cons->car);
+     } else if (nilp(x->cons->car)){
+	  return nil();
      } else {
 	  closure *clo = copy_closure(x->cons->car);
 	  clo->closing = append(clo->closing, x->closing);
-     	  return clo;
+     	  return rectify_closing(clo);
      } 
 }
 
@@ -233,11 +265,13 @@ closure *cdr(closure *x)
      if (nilp(x)) return x;
      //if (x->type != CONS_PAIR) return NULL;
      if (nilp(x->closing)){
-	  return x->cons->cdr;
+	  return copy_closure(x->cons->cdr);
+     } else if (nilp(x->cons->cdr)){
+	  return nil();
      } else {
 	  closure *clo = copy_closure(x->cons->cdr);
 	  clo->closing = append(clo->closing, x->closing);
-     	  return clo;
+     	  return rectify_closing(clo);
      } 
 }
 
@@ -260,17 +294,19 @@ closure *second(closure* list)
 closure *assoc(closure *sym, closure* closing)
 {
      if (nilp(closing)) {
-	  return closing;
+	  return nil();
      }
-     if (equal(sym, car(car(closing)))) {
-	  return cdr(car(closing));
+     if (equal(sym, cheap_car(cheap_car(closing)))) {
+	  return cheap_cdr(cheap_car(closing));
      }
-     return assoc(sym, cdr(closing));
+     return assoc(sym, cheap_cdr(closing));
 };
 
-closure *acons(closure *sym, closure *val, closure *closing)
+closure *cheap_acons(closure *sym, closure *val, closure *closing)
 {
-     closure *ret =  cons(cons(sym, cons(val, nil())), closing);
+     closure *ret =  cheap_cons(
+	  cheap_cons(sym, cheap_cons(val, nil())), 
+	  closing);
      return ret;
 };
 
@@ -314,9 +350,9 @@ void internal_set(closure *sym,
 {
      closure *old = looker_up(sym, aframe);
      if (nilp(old)){
-	  base_frame->scope = acons(sym,
-				    value,
-				    base_frame->scope);
+	  base_frame->scope = cheap_acons(sym,
+					  value,
+					  base_frame->scope);
      } else {
          old->cons->car = value;
      };
@@ -325,8 +361,8 @@ void internal_set(closure *sym,
 int commap(closure *arg)
 {
      if ((arg->type == CONS_PAIR) &&
-	 (car(arg)->type == SYMBOL) &&
-	 (car(arg)->symbol_id == COMMA)) return 1;
+	 (cheap_car(arg)->type == SYMBOL) &&
+	 (cheap_car(arg)->symbol_id == COMMA)) return 1;
      return 0;
 };
 
@@ -334,24 +370,24 @@ int asterixp(closure *arg)
 {
      // returns true if argument == *x
      if ((arg->type == CONS_PAIR) &&
-	 (car(arg)->type == SYMBOL) &&
-	 (car(arg)->symbol_id == ASTERIX)) return 1;
+	 (cheap_car(arg)->type == SYMBOL) &&
+	 (cheap_car(arg)->symbol_id == ASTERIX)) return 1;
      return 0;
 };
 int atpendp(closure *arg)
 {
      // returns true if argument == *x
      if ((arg->type == CONS_PAIR) &&
-	 (car(arg)->type == SYMBOL) &&
-	 (car(arg)->symbol_id == ATPEND)) return 1;
+	 (cheap_car(arg)->type == SYMBOL) &&
+	 (cheap_car(arg)->symbol_id == ATPEND)) return 1;
      return 0;
 };
 int quotep(closure *sym)
 {
      // returns true if argument == *x
      if ((sym->type == CONS_PAIR) &&
-	 (car(sym)->type == SYMBOL) &&
-	 (car(sym)->symbol_id == QUOTE)) return 1;
+	 (cheap_car(sym)->type == SYMBOL) &&
+	 (cheap_car(sym)->symbol_id == QUOTE)) return 1;
      return 0;
 };
 int elipsisp(closure *sym)
@@ -386,13 +422,17 @@ operation *build_argument_chain(closure *lambda_list,
 				operation *current)
 {
      // builds the operations necessary to evaluate the arguments of a fn.
-     if (lambda_list->type == NIL) {
+     if (nilp(lambda_list)) {
 	  if (!nilp(arg_list)) {
-	       printf("Too many args!"); // need an actual action here.
+	       return -1;
 	  }
 	  // If we're out of lambda list, we're done!
 	  return current;
      } else if (asterixp(car(arg_list))){
+	  // If the first argument is a *arg, then we need to grab
+	  // the actual argument, which is the ((asterix HERE) ...)
+	  // then we build a continue-apply structure so that we can 
+	  // pause and evaluate the argument.
 	  // accum->(closure_op, x)->(continue_apply,
 	  //                          (lambda_list . arg_list->cdr))
 
@@ -405,13 +445,15 @@ operation *build_argument_chain(closure *lambda_list,
 	  operation *bnext = new(operation);
 	  bnext->type = MACHINE_FLAG;
 	  bnext->flag = CONTINUE_APPLY;
-	  bnext->closure = cons(lambda_list, cdr(arg_list));
+	  bnext->closure = cheap_cons(lambda_list, cdr(arg_list));
 	  current->next = bnext;
 	  current = bnext;
 
 	  return current;
 
      } else if (atpendp(car(arg_list))){
+     // It's a similar story with atpend as asterix;
+     // a different machine flag, but that's all.
 	  // accum->(closure_op, x)->(continue_apply,
 	  //                          (lambda_list . arg_list->cdr))
 	  operation *tnext = new(operation);
@@ -423,14 +465,14 @@ operation *build_argument_chain(closure *lambda_list,
 	  operation *bnext = new(operation);
 	  bnext->type = MACHINE_FLAG;
 	  bnext->flag = ATPEND_APPLY;
-	  bnext->closure = cons(lambda_list, cdr(arg_list));
+	  bnext->closure = cheap_cons(lambda_list, cdr(arg_list));
 	  current->next = bnext;
 	  current = bnext;
 
 	  return current;
 
      } else if (elipsisp(car(lambda_list))){
-	  // the trick here is that you have to signal yourself
+	  // The trick here is that you have to signal yourself
 	  // that you're elipsising, even THROUGH a continue_apply
 	  closure *argm;
 	  if (quotep(second(lambda_list))){
@@ -525,6 +567,7 @@ operation *make_arg(closure *sym, closure *val, operation *current)
 
 closure *clear_list(closure *args)
 {
+     // TODO WARNING; I am not sure what this is for.
      if (args->type != CONS_PAIR){
 	  printf("YOU'RE A POOP HEAD: senseless args to clear_list.");
 	  return nil();
@@ -550,11 +593,12 @@ closure *find_free_variables(closure *code,
 			     closure *accum)
 {
      if (free_varp(code, accum, current_frame)){
+	  //print_closure(code);
 	  closure* value = looker_up(code, current_frame);
 	  if (!nilp(value)){
-	       accum = cheap_cons(cheap_cons(code, 
-					     cheap_cons(car(value), 
-							nil())), accum);
+	       accum = cheap_acons(code, 
+				   car(value), 
+				   accum);
 	  }
      } else if (code->type == CONS_PAIR && !quotep(code)){
 	  accum = find_free_variables(code->cons->car,
@@ -569,10 +613,14 @@ closure *find_free_variables(closure *code,
 
 closure *enclose(closure *code, frame *current_frame)
 {
+//     printf("I'm closing over ");
+     //    print_closure(code);
+     //printf(":\n");
      closure *ret = copy_closure(code);
      ret->closing = find_free_variables(code, 
 					current_frame, 
 					code->closing);
+     //printf("and the result is\n"); print_closure(ret->closing); printf("\n\n");
      return ret;
 };
 
@@ -634,22 +682,28 @@ frame *new_frame(frame *below)
      return ret;
 }
 
+void print_info(machine *m)
+{
+     printf("\ninstruction: ");
+     if(m->current_frame->next){
+     	  print_op(m->current_frame->next);
+     }
+     if(m->accum){
+      	  printf(", accum: ");
+     	  print_closure(m->accum);
+        }
+     print_stack(m->current_frame);
+     printf("\n");
+     
+//printf("\ndon printing\n\n");
+ }
+
+
 int virtual_machine_step(machine *m)
 {
-     /* printf("\ninstruction: "); */
-     /*     if(m->current_frame->next){ */
-     /* 	  print_op(m->current_frame->next); */
-     /*    } */
-     /* if(m->accum){ */
-    /*   //	  print_stack(m->current_frame); */
-     /* 	  printf(", accum: "); */
-     /* 	  print_closure(m->accum); */
-     /*    } */
-     /*   printf("\n");   */
-     
-     /* print_stack(m->current_frame); */
-     /* printf("\ndon printing\n\n"); */
-     // pop/halt condition
+     if(DEBUG) print_info(m);
+     // If there's no next instruction on this frame, pop it. 
+     // If there's no frame below this one, halt (return 1)
      if (m->current_frame->next == NULL){
 	  if (m->current_frame->below != NULL){
 	       m->current_frame = m->current_frame->below;
@@ -658,33 +712,47 @@ int virtual_machine_step(machine *m)
 	       return 1; // halt instead of popping the final frame
 	  }
      }
+
+     // Pop the current instruction into 'instruction'
      operation *instruction = m->current_frame->next;
      m->current_frame->next = instruction->next;
-     if (instruction->type == CLOSURE_OP){
-	  if (instruction->closure->type == BUILTIN){
 
+     // A 'closure-op' is an operation that contains an eight list
+     // to be evaluated plainly.
+     if (instruction->type == CLOSURE_OP){
+
+	  if (instruction->closure->type == BUILTIN){
+	       // If it's a builtin function, then we should simply call
+	       // the function pointer and let it figure out what to do.
 	       builtin fn = instruction->closure->builtin_fn;
 	       fn(m);
 
+	       
 	  } else if (instruction->closure->type == CONTINUATION){
+	       // A continuation requires looking up the call value
+	       // and putting it in accum, before replacing the machine
+	       // with the one contained inside the continuation.
 	       m->accum = car(looker_up(symbol(string_to_symbol_id("a")), 
 					m->current_frame));
 	       m->base_frame = instruction->closure->mach->base_frame;
 	       m->current_frame = instruction->closure->mach->current_frame;    
 
 	  } else if (instruction->closure->type == SYMBOL){
+	       // A symbol should be looked up, and the result placed in 
+	       // accum. If it is undefined, a signal should be thrown.
 	       closure *res =  looker_up(instruction->closure,
 					 m->current_frame);
 	       if (nilp(res)) {
-		    printf("nada\n");
-		    print_closure(instruction->closure);
-//		    closure *sig = build_signal(cons(string("\n\n\nthere's an old man in town\nwho puts his spoon in his mouth\nand swallows\nbut there's nothing there\n\n\nerror: I attempted to look up a symbol that was undefined: "), instruction->closure), m);
-//		    toss_signal(sig, m);
+		    closure *sig = build_signal(cons(string("\n\n\nthere's an old man in town\nwho puts his spoon in his mouth\nand he swallows\nbut there's no soup in the bowl\n\n\nerror: I attempted to look up a symbol that was undefined: "), cons(instruction->closure, nil())), m);
+		    toss_signal(sig, m);
 	       } else {
 		    m->accum = car(res);
 	       }
 
 	  } else if (!nilp(instruction->closure->closing)){
+	       // If the closure has a non-nil closing, then we need to 
+	       // add a frame to insert that closing into the scope,
+	       // and then try again.
 
                // new frame, as if a function application
 	       m->current_frame = new_frame(m->current_frame);
@@ -699,25 +767,36 @@ int virtual_machine_step(machine *m)
 	       m->current_frame->scope = instruction->closure->closing;
 
 	  } else if (instruction->closure->type != CONS_PAIR){
-
-	       // shortcut for char, num and other directs.
+	       // This test is maybe a little dangerous, because it's a
+	       // shortcut for characters, numbers, and other 'literals' that
+	       // return themselves when evaluated. (3 -> 3)
 	       m->accum = instruction->closure;
 
 	  } else if (quotep(instruction->closure)){
+	       // If the instruction has been quoted, enclose it.
 	       m->accum = enclose(second(instruction->closure), 
 				  m->current_frame);
-
 	       // TODO sanity check, is lonely cdr?
-	  } else if (car(instruction->closure)->symbol_id == CLEAR){
 
+	  } else if (car(instruction->closure)->symbol_id == CLEAR){
+	       // Clear is necessary for atpend. Return
+	       // the object that has been tagged to clear.
 	       m->accum = car(cdr(instruction->closure));
 
 	  } else if (stringp(instruction->closure)){
-
+	       // This is a bit of a hack, and may change if I have
+	       // a better idea. In the meantime, strings are literals.
 	       m->accum = instruction->closure;
 
 	  } else {
-	       // fn application
+	       // This is actually the bulk of the work, right here :)
+	       // If it's not any of the previous things, then it's
+	       // function application. So here we create a different kind
+	       // of instruction: the machine flag. Machine flag instructions
+	       // are internal notes from the interpreter to itself. In this
+	       // case, it's APPLY, which starts the function application 
+	       // process once the function istelf has been looked up.
+
 	       operation* fn=new(operation);
 	       operation* apply=new(operation);
 	       fn->type = CLOSURE_OP;
@@ -731,11 +810,17 @@ int virtual_machine_step(machine *m)
 
 	  };
 
-
      } else if (instruction->type == MACHINE_FLAG){
-
+	  // That's it for ways to interpret simple closures. Now, we
+	  // move on to machine flag instructions.
 
 	  if (instruction->flag == APPLY) {
+	       // The APPLY step adds a new frame to the stack (unless
+	       // there's a tail-call), prepares the 'rib' (which will
+	       // become the scope of the new function call), builds the
+	       // argument chain (which is a series of instructions that 
+	       // evaluate the arguments before actually performing the 
+	       // function. 
 
 	       frame* n_frame;
 	       if ((m->current_frame->next == NULL) && 
@@ -747,12 +832,19 @@ int virtual_machine_step(machine *m)
 	       n_frame->rib = m->accum->closing;
 
 	       operation* fn=new(operation);
-	       operation* chain=build_argument_chain(fn_lambda_list(m->accum),
-						     instruction->closure,
-						     fn);
 	       fn->type = MACHINE_FLAG;
 	       fn->flag = DO; 
 	       fn->closure = m->accum;
+	       m->current_frame = n_frame;
+	       operation* chain=build_argument_chain(fn_lambda_list(m->accum),
+						     instruction->closure,
+						     fn);
+
+	       if(chain == -1){
+		    closure *sig = build_signal(cons(string("\n\n\nClouds drift into my window\nbut they don't drift out again\nsoon the frame will burst\nand the sill will fall\n\n\nerror: too many arguments were given to this function:"), cons(m->accum, nil())), m);
+		    toss_signal(sig, m);
+		    return 0;
+	       } 
 	       if (fn->next != NULL){
 		    n_frame->next = fn->next;
 		    chain->next = fn;
@@ -760,22 +852,32 @@ int virtual_machine_step(machine *m)
 	       } else {
 		    n_frame->next = fn;
 	       }
-	       m->current_frame = n_frame;
+
 
 	  } else if (instruction->flag == ARGUMENT){
+	       // This one pushes the argument onto the rib, once it's been
+	       // evaluated.
+
 	       if (e_argp(instruction->closure)){
+		    // If it's an elipsis-arguemnt, then
+		    // keep tacking things on to the last
+		    // arg.
+		    // TODO: This is slow, and might be better done backwards
+		    // with an extra 'reverse' at the end.
 		    closure *last = cdr(car(m->current_frame->rib));
 		    last->cons->car = append(last->cons->car,
 					     cons(m->accum, nil()));
 			 
 	       } else {
-		    m->current_frame->rib = acons(instruction->closure,
-						  m->accum,
-						  m->current_frame->rib);
+		    // If it's a normal arg, just do this.
+		    m->current_frame->rib = cheap_acons(instruction->closure,
+							m->accum,
+							m->current_frame->rib);
 	       }
 
 	  } else if (instruction->flag == CONTINUE_APPLY){
-
+	       // CONTINUE_APPLY reloads an argument chain when the machine
+	       // has had to pause and evaluate some part of it (for asterices)
 	       operation* fn=new(operation);
 	       fn->type = CLOSURE_OP;
 	       operation* boo = build_argument_chain(
@@ -786,6 +888,9 @@ int virtual_machine_step(machine *m)
 	       m->current_frame->next = fn->next;
 
 	  } else if (instruction->flag == ATPEND_APPLY){
+	       // Here, we want to evaluate the argument, splice it in,
+	       // but NOT evaluate it a second time. So we clear_list it,
+	       // unlike above.
 
 	       closure *args = clear_list(m->accum);
 	       operation* fn=new(operation);
