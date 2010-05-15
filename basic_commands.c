@@ -326,39 +326,39 @@ void id_fn(machine *m){
 /* closure *int_to_fix(int num); */
 
 /* void load_lib_fn(machine *m){ */
-/*   closure *name = get_arg(name, m); */
-/*   char *rname = to_c_string(name); */
-/*   void *lib = dlopen(rname,RTLD_NOW|RTLD_GLOBAL); */
-/*   closure *ret = (closure *)GC_MALLOC(sizeof(closure)); */
-/*   ret->type = C_OBJECT; */
-/*   ret->value = lib; */
-/*   m->accum = ret; */
+/*      closure *name = get_arg(name, m); */
+/*      char *rname = to_c_string(name); */
+/*      void *lib = dlopen(rname,RTLD_NOW|RTLD_GLOBAL); */
+/*      closure *ret = new(closure); */
+/*      ret->type = C_OBJECT; */
+/*      ret->value = lib; */
+/*      m->accum = ret; */
 /* } */
 
 /* void get_lib_object_fn(machine *m){ */
-/*   closure *lib = get_arg(lib, m); */
-/*   closure *name = get_arg(name, m); */
-/*   char *rname = to_c_string(name); */
-/*   void *obj = dlsym(rname, (lib->value)); */
-/*   closure *ret = (closure *)GC_MALLOC(sizeof(closure)); */
-/*   ret->type = C_OBJECT; */
-/*   ret->value = &obj; */
-/*   m->accum = ret; */
+/*      closure *lib = get_arg(lib, m); */
+/*      closure *name = get_arg(name, m); */
+/*      char *rname = to_c_string(name); */
+/*      void *obj = dlsym(rname, (lib->value)); */
+/*      closure *ret = new(closure); */
+/*      ret->type = C_OBJECT; */
+/*      ret->value = &obj; */
+/*      m->accum = ret; */
 /* } */
 
 /* void call_c_fn(machine *m){ */
-/*   closure *fn = get_arg(fn, m); */
-/*   closure *args = get_arg(args, m); */
-/*   int len = length(args); */
-/*   void * (*pooer)() = (fn->value); */
-/*   void *rret; */
-/*   switch (len) { */
-/*   case 0: rret = &(pooer()); */
-/*   } */
-/*   closure *ret = (closure *)GC_MALLOC(sizeof(closure)); */
-/*   ret->type = C_OBJECT; */
-/*   ret->value = rret; */
-/*   m->accum = ret; */
+/*      closure *fn = get_arg(fn, m); */
+/*      closure *args = get_arg(args, m); */
+/*      int len = length(args); */
+/*      void * (*pooer)() = (fn->value); */
+/*      void *rret; */
+/*      switch (len) { */
+/*      case 0: rret = &(pooer()); */
+/*      } */
+/*      closure *ret = new(closure); */
+/*      ret->type = C_OBJECT; */
+/*      ret->value = rret; */
+/*      m->accum = ret; */
 /* } */
 
 //--------------------------------------------------------------------//

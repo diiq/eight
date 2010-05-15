@@ -103,9 +103,6 @@ struct memory_block_struct {
 };
 
 
-
-
-
 machine *collect();
 void *repair_reference(void *ref);
 void copy_memory(int start, int end);
@@ -215,6 +212,7 @@ void new_basic_commands(machine *m);
 void toss_signal(closure* sig, machine* m);
 closure * build_signal(closure *a, machine *m);
 closure *string(char * str);
+int stringp(closure* a);
 // builtins
 /*
 read

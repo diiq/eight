@@ -1,4 +1,4 @@
-; hi! If you're reading this to learn about eight, I suggest skipping the 
+; Hi! If you're reading this to learn about eight, I suggest skipping the 
 ; following 4 functions, until you're more comfortable with the language.
 ; If you feal comfortable with the Eight function 'leak', and the behavior of
 ; Eight's semiotic programming features, then by all means, dive in. Otherwise,
@@ -181,11 +181,14 @@
 (def find (test seq)
   (reclist (fn (x) (if (test (car x)) (car x))) seq))
 
-(def map (f seq ... 'seqs)
+(def map (f seq ... seqs)
   (if (no seqs)
-      (list (map1 f seq))
-      (cons (map1 f seq)
-	    (map f *seqs))))
+      (map1 f seq)
+    (no (cdr seqs))
+    (list (map1 f seq)
+	  (map f @seqs))
+    (cons (map1 f seq)
+	  (map f @seqs))))
 
 
 ; I don't like the fact that I must quote yss here; I think I may

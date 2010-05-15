@@ -20,9 +20,10 @@
 #include "symbols.c"
 
 machine *init_8VM()
+
 {
-//     test_memory();
-//     error(32623653, 432747235, "got there");
+  //  test_memory();
+  // error(32623653, 432747235, "got there");
      machine *m =  init_memory();
      frame *bframe = new_frame(NULL);
      m->current_frame = bframe;

@@ -31,3 +31,6 @@ int stringp_internal(closure *a)
 	  return stringp_internal(cdr(a));
      return 0;
 }
+
+//char* to_c_string(char *a){
+  
