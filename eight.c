@@ -29,12 +29,12 @@ machine *init_8VM()
      m->current_frame = bframe;
      m->base_frame = bframe;
 
-     insert_symbol("quote", QUOTE);
-     insert_symbol("asterix", ASTERIX);
-     insert_symbol("atpend", ATPEND);
-     insert_symbol("comma", COMMA);
-     insert_symbol("...", ELIPSIS);
-          insert_symbol("t", T);
+     insert_symbol(L"quote", QUOTE);
+     insert_symbol(L"asterix", ASTERIX);
+     insert_symbol(L"atpend", ATPEND);
+     insert_symbol(L"comma", COMMA);
+     insert_symbol(L"...", ELIPSIS);
+     insert_symbol(L"t", T);
 
      internal_set(symbol(T), symbol(T), bframe, bframe);
      new_basic_commands(m);
@@ -733,7 +733,7 @@ int virtual_machine_step(machine *m)
 	       // A continuation requires looking up the call value
 	       // and putting it in accum, before replacing the machine
 	       // with the one contained inside the continuation.
-	       m->accum = car(looker_up(symbol(string_to_symbol_id("a")), 
+	       m->accum = car(looker_up(symbol(string_to_symbol_id(L"a")), 
 					m->current_frame));
 	       m->base_frame = instruction->closure->mach->base_frame;
 	       m->current_frame = instruction->closure->mach->current_frame;    
@@ -744,7 +744,7 @@ int virtual_machine_step(machine *m)
 	       closure *res =  looker_up(instruction->closure,
 					 m->current_frame);
 	       if (nilp(res)) {
-		    closure *sig = build_signal(cons(string("\n\n\nthere's an old man in town\nwho puts his spoon in his mouth\nand he swallows\nbut there's no soup in the bowl\n\n\nerror: I attempted to look up a symbol that was undefined: "), cons(instruction->closure, nil())), m);
+		    closure *sig = build_signal(cons(string(L"\n\n\nthere's an old man in town\nwho puts his spoon in his mouth\nand he swallows\nbut there's no soup in the bowl\n\n\nerror: I attempted to look up a symbol that was undefined: "), cons(instruction->closure, nil())), m);
 		    toss_signal(sig, m);
 	       } else {
 		    m->accum = car(res);
@@ -842,7 +842,7 @@ int virtual_machine_step(machine *m)
 						     fn);
 
 	       if(chain == -1){
-		    closure *sig = build_signal(cons(string("\n\n\nClouds drift into my window\nbut they don't drift out again\nsoon the frame will burst\nand the sill will fall\n\n\nerror: too many arguments were given to this function:"), cons(m->accum, nil())), m);
+		    closure *sig = build_signal(cons(string(L"\n\n\nClouds drift into my window\nbut they don't drift out again\nsoon the frame will burst\nand the sill will fall\n\n\nerror: too many arguments were given to this function:"), cons(m->accum, nil())), m);
 		    toss_signal(sig, m);
 		    return 0;
 	       } 

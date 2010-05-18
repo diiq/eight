@@ -1,6 +1,9 @@
 #ifndef EIGHT_HEADER
 #define EIGHT_HEADER
 
+#include <wchar.h>
+
+
 #define new(x) (x *)allocate(sizeof(x));
 //#define new(x) (x *)calloc(1, sizeof(x));
 
@@ -68,7 +71,7 @@ struct closure_struct {
 	  void    *c_object;
 	  machine *mach;
 	  symbol_id symbol_id;
-	  char    character;
+	  wchar_t    character;
 	  int     num;
 	  cons_cell *cons;
 	  void    *obj;
@@ -121,9 +124,9 @@ void *allocate(int size);
 
 //symbol table
 void initialize_symbol_table();
-void insert_symbol(char *name, int val);
-symbol_id string_to_symbol_id(char *name);
-char* symbol_id_to_string(symbol_id sym);
+void insert_symbol(wchar_t *name, int val);
+symbol_id string_to_symbol_id(wchar_t *name);
+wchar_t* symbol_id_to_string(symbol_id sym);
 
 // making symbols
 closure *nil();
@@ -160,6 +163,7 @@ closure *rectify_closing(closure *closed);
 closure *cheap_acons(closure *sym, closure *val, closure *closing);
 closure *assoc(closure *sym, closure *closing);
 closure *append(closure *a, closure *b);
+int length(closure *a);
 
 // closings
 int free_varp(closure *token,
@@ -211,8 +215,14 @@ void new_basic_commands(machine *m);
 
 void toss_signal(closure* sig, machine* m);
 closure * build_signal(closure *a, machine *m);
-closure *string(char * str);
+closure *string(wchar_t * str);
 int stringp(closure* a);
+closure* character(wchar_t a);
+closure *string_to_number(closure *a);
+
+// parsing
+closure *parse_file(FILE *file);
+
 // builtins
 /*
 read

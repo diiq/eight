@@ -4,7 +4,7 @@
 typedef struct element_struct element;
 
 struct element_struct {
-     char* name;
+     wchar_t *name;
      symbol_id id;
      element *next;
 }; 
@@ -19,19 +19,19 @@ void initialize_symbol_table()
      symbol_table_tail = symbol_table_root;
      symbol_table_root->id = -1;			
      symbol_table_root->name = NULL;
-     insert_symbol("...", ELIPSIS);
-     insert_symbol("asterix", ASTERIX);
-     insert_symbol("comma", COMMA);
-     insert_symbol("quote", QUOTE);
-     insert_symbol("atpend", ATPEND);
-     insert_symbol("leaked", LEAKED);
-     insert_symbol("t", T);
+     insert_symbol(L"...", ELIPSIS);
+     insert_symbol(L"asterix", ASTERIX);
+     insert_symbol(L"comma", COMMA);
+     insert_symbol(L"quote", QUOTE);
+     insert_symbol(L"atpend", ATPEND);
+     insert_symbol(L"leaked", LEAKED);
+     insert_symbol(L"t", T);
 }
 
-void insert_symbol(char *name, int val)
+void insert_symbol(wchar_t *name, int val)
 {
-     char *nname = (char *)malloc(sizeof(char)*strlen(name));
-     strcpy(nname, name);
+     wchar_t *nname = (wchar_t *)malloc(sizeof(wchar_t)*wcslen(name));
+     wcscpy(nname, name);
 
      element *next = (element *)malloc(sizeof(element));
      symbol_table_tail->next = next;
@@ -42,7 +42,7 @@ void insert_symbol(char *name, int val)
 }
 
 
-symbol_id string_to_symbol_id(char *name)
+symbol_id string_to_symbol_id(wchar_t *name)
 {
      symbol_id ret = recursive_string_to_symbol_id(name, 
 						   symbol_table_root->next);    
@@ -55,10 +55,10 @@ symbol_id string_to_symbol_id(char *name)
      }
 }
 
-symbol_id recursive_string_to_symbol_id(char* name, element *root)
+symbol_id recursive_string_to_symbol_id(wchar_t* name, element *root)
 {
   
-     if (strcmp(name, root->name) == 0){
+     if (wcscmp(name, root->name) == 0){
 	  return root->id;
      } else if(root->next == NULL){
 	  return -1;
@@ -68,7 +68,7 @@ symbol_id recursive_string_to_symbol_id(char* name, element *root)
 }
 
 
-char* recursive_symbol_id_to_string(symbol_id id, element *root)
+wchar_t* recursive_symbol_id_to_string(symbol_id id, element *root)
 {
      if (id == root->id){
 	  return root->name;
@@ -79,8 +79,22 @@ char* recursive_symbol_id_to_string(symbol_id id, element *root)
      }
 }
 
-char* symbol_id_to_string(symbol_id sym){
+wchar_t* symbol_id_to_string(symbol_id sym){
      return recursive_symbol_id_to_string(sym, symbol_table_root);
+}
+
+closure* string_to_symbol(closure *a){
+    // Watch it! Takes an eight string, not a c-string.
+    if (!stringp(a))
+	error(121, 121, "Oh man, I tried to make a symbol out of a non-string.");
+    int l = length(a);
+    wchar_t name[50] = {L'\0'};
+    int i = 0;
+    for(i=0; i<l; i++){
+	name[i] = car(a)->character;
+	a = cdr(a);
+    }
+    return symbol(string_to_symbol_id(name));
 }
 
 #endif

@@ -3,8 +3,8 @@
 void print_closure(closure *a)
 {
      if (a->type == SYMBOL) {
-	  char* sym = symbol_id_to_string(a->symbol_id);
-	  printf("%s", sym);
+	  wchar_t* sym = symbol_id_to_string(a->symbol_id);
+	  printf("%ls", sym);
      } else if (a->type == NUMBER) {
 	  printf("%d", a->num);
      } else if (a->type == CHARACTER) {

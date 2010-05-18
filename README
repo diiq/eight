@@ -12,7 +12,10 @@
 Document last modified: 5/15/2010                                      
 Eight 2010, a lisp by Sam Bleckley
 
-Eight is a programming language intended to make metaprogramming easier. It is based on lisp, but with significant changes under the hood. Eight is currently pre-alpha, so please expect nothing and be surprised when you get something.
+Eight is a programming language intended to make metaprogramming
+easier. It is based on lisp, but with significant changes under the
+hood. Eight is currently pre-alpha, so please expect nothing and be
+surprised when you get something.
 
 Contact me!
 Sam Bleckley

@@ -1,6 +1,7 @@
 #include "eight.h"
+#include <math.h>
 
-closure* character(char a)
+closure* character(wchar_t a)
 {
      closure *ret = new(closure);
      ret->type = CHARACTER;
@@ -9,7 +10,7 @@ closure* character(char a)
      return ret;
 }
 
-closure *string(char * str)
+closure *string(wchar_t * str)
 {
      if(*str == 0)
 	  return nil();
@@ -32,5 +33,18 @@ int stringp_internal(closure *a)
      return 0;
 }
 
-//char* to_c_string(char *a){
-  
+/* closure *string_to_number(closure *a){ */
+/*     if (!stringp(a)) */
+/* 	error(121, 121, "Oh man, I tried to convert a number from a non-string."); */
+/*     int l = length(a); */
+/*     int num = 0; */
+/*     int i; */
+/*     for(i=l; i>0; i--){ */
+/* 	num += (car(a)->num) * pow(10,i); */
+/* 	a = cdr(a); */
+/*     } */
+/*     return number(num); */
+
+/* } */
+
+

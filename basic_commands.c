@@ -3,13 +3,9 @@
 
 #include "eight.h"
 
-//what actually needs to be done? the symbol needs to be registered, 
-// the lambda-list built, the arguments looked up, function made, and
-// function bound.
+#define make_arg(sym) symbol(string_to_symbol_id(L""#sym))
 
-#define make_arg(sym) symbol(string_to_symbol_id(#sym))
-
-#define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(#sym)), \
+#define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(L""#sym)), \
 				      m->current_frame))     		
 
 #define intern_fn(fn_name, fn_pointer, lambda_list, m)	do {		\
@@ -18,26 +14,24 @@
 	  sym->builtin_fn = fn_pointer;					\
 	  sym->closing = nil();						\
 	  sym->info = nil();						\
-	  internal_set(symbol(string_to_symbol_id(#fn_name)),		\
+	  internal_set(symbol(string_to_symbol_id(L""#fn_name)),		\
 		       cons(lambda_list, cons(sym, nil())),		\
 		       m->current_frame,                                \
                        m->base_frame);                                  \
   } while (0)
 
- 
-closure *sassy;
 
 void set_fn(machine *m)
 {
      closure *a = get_arg(a, m);
      if (a->type != SYMBOL){
-       closure *sig = build_signal(cons(string("\n\nHolding a clay pot\nI could call the mouth of it an umbilical cord\n o mother-universe, where is the child that was born in the kiln-fire?\n\n\nerror: I attempted to set! something that isn't a symbol: "), cons(a, nil())), m);
+	  closure *sig = build_signal(cons(string(L"\n\nHolding a clay pot\nI could call the mouth of it an umbilical cord\n o mother-universe, where is the child that was born in the kiln-fire?\n\n\nerror: I attempted to set! something that isn't a symbol: "), cons(a, nil())), m);
        	  toss_signal(sig, m);
      } else {
-       a = symbol(a->symbol_id);
-       closure *b = get_arg(b, m);
-       internal_set(a, b, m->current_frame->below, m->base_frame);
-       m->accum = b;
+	  a = symbol(a->symbol_id);
+	  closure *b = get_arg(b, m);
+	  internal_set(a, b, m->current_frame->below, m->base_frame);
+	  m->accum = b;
      }
 }
 
@@ -47,7 +41,7 @@ void is_fn(machine *m)
 {
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-
+     
      if (equal(a, b)) {
 	  m->accum = symbol(T);
      } else {
@@ -58,11 +52,11 @@ void is_fn(machine *m)
 
 void oif_fn(machine *m)
 {
-  operation* newop = new(operation);
+     operation* newop = new(operation);
      newop->type = CLOSURE_OP;
      newop->next = m->current_frame->next;
      m->current_frame->next = newop;
-
+     
      closure *test = get_arg(test, m);
      closure *then = get_arg(then, m);
      closure *elser = get_arg(elser, m);
@@ -85,29 +79,23 @@ void car_fn(machine *m)
 {
      closure *acons = get_arg(cons, m);
      if (acons->type != CONS_PAIR && !nilp(acons)){
-       closure *sig = build_signal(cons(string("\n\nfinding the thousand things\nreflected within the tao\nis beyond me.\n\n\nerror: I attempted to retrieve the car from something that was not a cons pair: "), cons(acons, nil())), m);
+       closure *sig = build_signal(cons(string(L"\n\nfinding the thousand things\nreflected within the tao\nis beyond me.\n\n\nerror: I attempted to retrieve the car from something that was not a cons pair: "), cons(acons, nil())), m);
        toss_signal(sig, m);
      } else {
-	  if(acons->type == NIL){
-	       m->accum = nil();
-	  } else {
-	       m->accum = car(acons);
-	  }
+	 // Streams should act like lazy stings...?
+	 m->accum = car(acons);
      }
 }
+
 
 void cdr_fn(machine *m)
 {
      closure *acons = get_arg(cons, m);
      if (acons->type != CONS_PAIR && acons->type != NIL){
-       closure *sig = build_signal(cons(string("\n\nleaves rot on the warm dirt\nwhile the tree drinks rain\n he is not naked\n\n\nerror: I attempted to retrieve the cdr from something that is not a cons pair: "), cons(acons, nil())), m);
+       closure *sig = build_signal(cons(string(L"\n\nleaves rot on the warm dirt\nwhile the tree drinks rain\n he is not naked\n\n\nerror: I attempted to retrieve the cdr from something that is not a cons pair: "), cons(acons, nil())), m);
        toss_signal(sig, m);
      } else {
-	  if(acons->type == NIL){
-	       m->accum = nil();
-	  } else {
-	       m->accum = cdr(acons);
-	  }
+	 m->accum = cdr(acons);
      }
 }
 
@@ -149,7 +137,7 @@ void leak_fn(machine *m)
 {
      closure *sym = get_arg(sym, m);
      if (sym->type != SYMBOL && !nilp(sym)){
-       closure *sig = build_signal(cons(string("\n\nHow can I forget\nthe juice of the orange\nthat is still dripping from my chin\n\n\nerror: I attempted to leak something that isn't a symbol: "), cons(sym, nil())), m);
+       closure *sig = build_signal(cons(string(L"\n\nHow can I forget\nthe juice of the orange\nthat is still dripping from my chin\n\n\nerror: I attempted to leak something that isn't a symbol: "), cons(sym, nil())), m);
        //  printf("You leaked a non symbol, man \n");
 	  //print_closure((closure *) 5);
        toss_signal(sig, m);
@@ -368,14 +356,8 @@ void new_basic_commands(machine *m)
 {	  
     // TODO This is still more complicated than it should be.
      closure *sym;
-     closure *lam = cons(make_arg(a), nil());
-     closure *a = make_arg(a);
-     closure *b = make_arg(b);
-     closure *c = cons(make_arg(b), nil());
-     closure *d = cons(a, c);
 
-
-     intern_fn(is, &is_fn, d, m);
+     intern_fn(is, &is_fn, cons(make_arg(a), nil()), m);
   
      intern_fn(set!, &set_fn, cons(quote(make_arg(a)), 
 				   cons(make_arg(b), nil())), m);
