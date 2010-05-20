@@ -40,11 +40,11 @@ struct operation_struct{
 
 struct frame_struct {
      obj_type type;
-     operation     *next; 
+     operation   *next; 
      closure     *rib;
      closure     *scope;
      closure     *signal_handler; 
-     frame     *below;
+     frame       *below;
 };
 
 typedef struct {

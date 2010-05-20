@@ -1,0 +1,27 @@
+(' hallo)
+
+(base-signal-handler (' ((q) (print (cdr q)))))
+
+(set! unlambda (' ((list)
+		 (oif list (oif (is (car list) (' ...)) 
+		    	        (unlambda (cdr list))
+   			        (cons (oif (atom-p (car list)) 
+				           (car list) 
+				           (oif (is (car (car list))
+						    (' '))
+					       (car (cdr (car list)))
+					       (car (car list))))
+				      (unlambda (cdr list)))) ()))))
+(set! leak-all (' ((list closure)
+		 (oif list (leak-all (cdr list) 
+				     (leak (car list) closure)) closure))))
+
+(set! fn (' (((' lambda-list) ... (' code))
+	   (cons lambda-list (leak-all (unlambda lambda-list) code)))))
+
+(set! def (fn ((' name) (' lambda-list) ... (' code))
+              (set! (, name) 
+		    (set-info (fn (, lambda-list) (* code)) 
+			      (cons (cons (' function-name) (cons name ())) ())))))
+
+

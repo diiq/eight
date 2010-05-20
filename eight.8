@@ -29,12 +29,8 @@
 ;-----------------------------------------------------------;
 
 
-(set! do (fn (... 'evals)
-             ((fn () *evals))))
-
-
-(set! def (fn ('name 'lambda-list ... 'code) 
-              (set! ,name (fn ,lambda-list *code))))
+(def do (... 'evals)
+     ((fn () *evals)))	
 
 
 (def caar (xs) (car (car xs)))

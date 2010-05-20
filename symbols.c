@@ -19,18 +19,11 @@ void initialize_symbol_table()
      symbol_table_tail = symbol_table_root;
      symbol_table_root->id = -1;			
      symbol_table_root->name = NULL;
-     insert_symbol(L"...", ELIPSIS);
-     insert_symbol(L"asterix", ASTERIX);
-     insert_symbol(L"comma", COMMA);
-     insert_symbol(L"quote", QUOTE);
-     insert_symbol(L"atpend", ATPEND);
-     insert_symbol(L"leaked", LEAKED);
-     insert_symbol(L"t", T);
 }
 
 void insert_symbol(wchar_t *name, int val)
 {
-     wchar_t *nname = (wchar_t *)malloc(sizeof(wchar_t)*wcslen(name));
+    wchar_t *nname = (wchar_t *)malloc(sizeof(wchar_t)*(wcslen(name)+1));
      wcscpy(nname, name);
 
      element *next = (element *)malloc(sizeof(element));

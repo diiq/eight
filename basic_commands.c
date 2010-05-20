@@ -14,7 +14,7 @@
 	  sym->builtin_fn = fn_pointer;					\
 	  sym->closing = nil();						\
 	  sym->info = nil();						\
-	  internal_set(symbol(string_to_symbol_id(L""#fn_name)),		\
+	  internal_set(symbol(string_to_symbol_id(L""#fn_name)),	\
 		       cons(lambda_list, cons(sym, nil())),		\
 		       m->current_frame,                                \
                        m->base_frame);                                  \
@@ -119,7 +119,7 @@ void print_fn(machine *m)
 void prmachine_fn(machine *m)
 {
     print_stack(m->current_frame);
-    print_stack(m->base_frame);
+    //print_stack(m->baseTT_frame);
 }
 
 void start_debug_fn(machine *m)
@@ -302,6 +302,18 @@ void id_fn(machine *m){
      m->accum = get_arg(a, m);
 };
 
+
+void set_info_fn(machine *m){
+    closure *a = get_arg(a, m);
+    closure *info = get_arg(info, m);
+    a->info = info;
+    m->accum = a;
+}
+
+void get_info_fn(machine *m){
+    closure *a = get_arg(a, m);
+    m->accum = a->info;
+}
 //------------------------------- FFI --------------------------------//
 
 
@@ -357,7 +369,7 @@ void new_basic_commands(machine *m)
     // TODO This is still more complicated than it should be.
      closure *sym;
 
-     intern_fn(is, &is_fn, cons(make_arg(a), nil()), m);
+     intern_fn(is, &is_fn, cons(make_arg(a), cons(make_arg(b), nil())), m);
   
      intern_fn(set!, &set_fn, cons(quote(make_arg(a)), 
 				   cons(make_arg(b), nil())), m);
@@ -420,6 +432,12 @@ void new_basic_commands(machine *m)
 				    cons(make_arg(b), nil())), m);
      intern_fn(<, &less_fn, cons(make_arg(a), 
 				 cons(make_arg(b), nil())), m);
+
+     intern_fn(set-info, &set_info_fn, cons(make_arg(a), 
+					    cons(make_arg(info), nil())), m);
+
+     intern_fn(get-info, &get_info_fn, cons(make_arg(a), nil()), m);
+
 }    
 
 #endif

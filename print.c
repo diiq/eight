@@ -19,9 +19,9 @@ void print_closure(closure *a)
 	  printf(")");
      } else if (a->type == NIL){
 	  printf("()");
-     } // else {
-     // printf("v%d", (int)a->obj);
-     //}
+     }  else {
+	 printf("v%d", (int)a->obj);
+     }
     
      //  if(!nilp(a->closing)){
      // printf("[");

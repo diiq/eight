@@ -29,10 +29,10 @@ machine *init_8VM()
      m->current_frame = bframe;
      m->base_frame = bframe;
 
-     insert_symbol(L"quote", QUOTE);
-     insert_symbol(L"asterix", ASTERIX);
-     insert_symbol(L"atpend", ATPEND);
-     insert_symbol(L"comma", COMMA);
+     insert_symbol(L"'", QUOTE);
+     insert_symbol(L"*", ASTERIX);
+     insert_symbol(L"@", ATPEND);
+     insert_symbol(L",", COMMA);
      insert_symbol(L"...", ELIPSIS);
      insert_symbol(L"t", T);
 
