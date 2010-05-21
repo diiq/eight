@@ -369,13 +369,10 @@ void internal_set(closure *sym,
 {
      closure *old = looker_up(sym, aframe);
      if (nilp(old)){
-	 printf("new one");
 	  base_frame->scope = cheap_acons(sym,
 					  value,
 					  base_frame->scope);
      } else {
-	 printf("old one:");
-	 print_closure(old);
 	 memcpy(old->in->cons->car, value, sizeof(closure));
      };
 }

@@ -1,6 +1,6 @@
 (' hallo)
 
-(base-signal-handler (' ((q) (print (cdr q)))))
+(base-signal-handler (' ((q) (print q))))
 
 (set! unlambda (' ((list)
 		 (oif list (oif (is (car list) (' ...)) 
@@ -29,6 +29,18 @@
 
 (def cons-p (x) (no (atom-p x)))
 
+poop
+
+(base-signal-handler (fn (q) 
+			 (oif (cons-p (car (cdr q))) 
+			     ((fn () 
+				  (print (car (car (cdr q))))
+				  (print (car (cdr (car (cdr q)))))))
+			   (print "Untraditionally-formed signal. 
+Try using a poem, next time."))
+			 ()))
+
+
 (def copylist (xs)
   (oif (no xs)
       ()
@@ -36,8 +48,12 @@
 
 (def list (... args) (copylist args))
 
-
-
+(def assoc (key al)
+  (oif (no al)
+       ()
+       (oif (is (car (car al)) key)
+	    (cdr (car al))
+	    (assoc key (cdr al)))))
 
 (def newline-p (char) (is char $
 ))
@@ -51,9 +67,13 @@
 (def backslash-p (char) (is char $\ ))
 
 (set! first-table ())
+(set! rest-table ())
 
 (def add-first-function (test function)
      (set! first-table (cons (list test function) first-table)))
+
+(def add-rest-function (test function)
+     (set! rest-table (cons (list test function) rest-table)))
 
 (def first (xs)
      (inner-first xs first-table))
@@ -62,6 +82,14 @@
      (oif ((car (car table)) xs)
 	  ((car (cdr (car table))) xs)
 	  (inner-first xs (cdr table))))
+
+(def rest (xs)
+     (inner-rest xs rest-table))
+
+(def inner-rest (xs table)
+     (oif ((car (car table)) xs)
+	  ((car (cdr (car table))) xs)
+	  (inner-rest xs (cdr table))))
 
 (add-first-function (fn (xs) (' t)) (fn (xs) (signal (list "
 
@@ -74,16 +102,34 @@ error: I tried to take the first element of something I don't know how to take t
 
 (add-first-function (fn (xs) (cons-p xs)) (fn (xs) (car xs)))  
 
-(add-first-function (fn (xs) (is (get-info xs) (' poop))) (fn (xs) (' hallo)))
+(add-first-function (fn (xs) (is (car (assoc (' type)
+					     (get-info (car (cdr xs)))))
+				 (' stream)))
+		    (fn (xs) 
+			(set-cdr xs (list (read-character (car (cdr xs)))
+					  (car (cdr xs))))
+			(car xs)))
+				
+	      
+(add-rest-function (fn (xs) (' t)) (fn (xs) (signal (list "
 
+The ten thousand things
+unshatter
+the film of an explosion
+played in reverse.
 
-(set! a (' (1 2 3 4 5)))
+error: I tried to take the rest of something I don't know how to take the rest of:" xs))))
 
-(print (first a))
+(add-rest-function (fn (xs) (cons-p xs)) (fn (xs) (cdr xs)))  
 
-(set-info a (' poop))
+(add-rest-function (fn (xs) (is (car (assoc (' type)
+					     (get-info (car (cdr xs)))))
+				 (' stream)))
+		    (fn (xs) 
+			(set-cdr xs (list (read-character (car (cdr xs)))
+					  (car (cdr xs))))
+			(cdr xs)))
+			
 
-(print (first a))
+				
 
-
- 

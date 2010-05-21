@@ -345,7 +345,7 @@ void read_file_fn(machine *m)
     handle->in = new(doubleref);
     handle->in->type = C_OBJECT;
     handle->type = DREF;
-    handle->in->info = nil();
+    handle->in->info = cons(cons(symbol(string_to_symbol_id(L"type")), cons(symbol(string_to_symbol_id(L"stream")), nil())), nil());
     handle->closing = nil();
     wchar_t *fn = string_to_c_MALLOC(a);
     char *rfn = calloc(wcslen(fn), sizeof(char));
@@ -357,7 +357,7 @@ void read_file_fn(machine *m)
     }
     free(fn);
     free(rfn);
-    m->accum = handle;
+    m->accum = cons(character(fgetwc(handle->in->obj)), cons(handle, nil()));
 }
 
 void close_file_fn(machine *m)
@@ -372,6 +372,22 @@ void read_char_fn(machine *m)
     closure *handle = get_arg(handle, m);
     wchar_t c = fgetwc((FILE *)handle->in->obj);
     m->accum = character(c);
+}
+
+void set_car_fn(machine *m)
+{
+    closure *pair = get_arg(cons, m);
+    closure *val = get_arg(value, m);
+    pair->in->cons->car = val;
+    m->accum = pair;
+}
+
+void set_cdr_fn(machine *m)
+{
+    closure *pair = get_arg(cons, m);
+    closure *val = get_arg(value, m);
+    pair->in->cons->cdr = val;
+    m->accum = pair;
 }
 //------------------------------- FFI --------------------------------//
 
@@ -504,6 +520,12 @@ void new_basic_commands(machine *m)
      intern_fn(close-file, &close_file_fn, cons(make_arg(handle), nil()), m);
 
      intern_fn(read-character, &read_char_fn, cons(make_arg(handle), nil()), m);
+
+     intern_fn(set-car, &set_car_fn, cons(make_arg(cons), 
+					    cons(make_arg(value), nil())), m);
+
+     intern_fn(set-cdr, &set_cdr_fn, cons(make_arg(cons), 
+					    cons(make_arg(value), nil())), m);
 }    
 
 #endif
