@@ -42,9 +42,12 @@ machine * init_memory()
      machine *memory_root = allocate(sizeof(machine));
      memory_root->type = MACHINE;
      the_nil = allocate(sizeof(closure));
-     the_nil->type = NIL;
+     the_nil->in = allocate(sizeof(doubleref));
+     the_nil->type = DREF;
+     the_nil->in->type = NIL;
+     the_nil->in->info = the_nil;
      the_nil->closing = the_nil;
-     the_nil->info = the_nil;
+
 
      return memory_root;
 }
@@ -125,7 +128,9 @@ int mysizeof(void *typed)
      // sizeof is compile-time, and we need
      // runtime.
      obj_type type = *(obj_type*)typed;
-     if (type == NIL       ||
+     if (type == DREF){
+	 return sizeof(closure);
+     } else if (type == NIL||
 	 type == CONS_PAIR ||
 	 type == NUMBER    || 
 	 type == INTERNAL  || 	 
@@ -134,7 +139,7 @@ int mysizeof(void *typed)
 	 type == CONTINUATION ||
 	 type == BUILTIN   || 
 	 type == C_OBJECT){
-	  return sizeof(closure);
+	  return sizeof(doubleref);
      } else if (type == MACHINE_FLAG ||
 		type == CLOSURE_OP){
 	  return sizeof(operation);
@@ -192,13 +197,14 @@ void free_memory(memory *a)
 
 machine * collect()
 {
+
      if (memory_a->size < garbage_check){
 	  return memory_a->first->this;
      }
      // printf("collectin', 'cause size is %d and check is %d.\n",
      //	memory_a->size,
      // garbage_check);
-     // print_heap(memory_a);
+     //print_heap(memory_a);
      memory_b = malloc(sizeof(memory));
      memory_b->first = malloc(sizeof(memory_block));
      memory_b->first->this = calloc(1, BLOCK_SIZE);
@@ -234,42 +240,49 @@ void collectify()
      
      void *location = from_location(memory_b);
      obj_type type = *(obj_type*)(location);
-     if (type == NIL       ||	
-	 type == NUMBER    || 
-	 type == INTERNAL  || 	 
-	 type == CHARACTER ||
-	 type == SYMBOL    ||
-	 type == BUILTIN   || 
-	 type == C_OBJECT) {
-	  // printf("collecting a non-reference closure\n");
-	  closure *it =  ((closure *)(location));
-	  it->closing = repair_reference(it->closing);
-	  it->info = repair_reference(it->info);
+     //     print_heap(memory_b);
+     if (type == DREF){
+	 closure *it =  ((closure *)(location));
+	 it->closing = repair_reference(it->closing);
+	 it->in = repair_reference(it->in);
+
+     } else if (type == NIL        ||	
+		type == NUMBER     || 
+		type == INTERNAL   || 	 
+		type == CHARACTER  ||
+		type == SYMBOL     ||
+		type == BUILTIN    || 
+		type == C_OBJECT) {
+	 // printf("collecting a non-reference closure\n");
+	 doubleref *it =  ((doubleref *)(location));
+	 it->info = repair_reference(it->info);
+	  
      } else if (type == CONS_PAIR) {
-	  // printf("collecting a cons pair\n");
-	  closure *it =  ((closure *)(location));
-	  it->cons = repair_reference(it->cons);
-	  it->closing = repair_reference(it->closing);
-	  it->info = repair_reference(it->info);
+	 //printf("collecting a cons pair\n");
+	 doubleref *it =  ((doubleref *)(location));
+	 it->info = repair_reference(it->info);
+	 it->cons = repair_reference(it->cons);
+
      } else if (type == CONS_CELL) {
-          // printf("collecting a cell\n");
+	 //printf("collecting a cell\n");
 	  cons_cell *it = ((cons_cell *)(location));
 	  it->car = repair_reference(it->car);
 	  it->cdr = repair_reference(it->cdr);
+
      } else if (type == CONTINUATION) {
-	  // printf("collecting a continuation\n");
-	  closure *it = ((closure *)(location));
-	  it->mach = repair_reference(it->mach);
-	  it->closing = repair_reference(it->closing);
-	  it->info = repair_reference(it->info);	 
+	 //printf("collecting a continuation\n");
+	 doubleref *it =  ((doubleref *)(location));
+	 it->info = repair_reference(it->info);	 
+	 it->mach = repair_reference(it->mach);
+
      } else if (type == MACHINE){
-          // printf("collecting a machine\n");
+	 //printf("collecting a machine\n");
 	  machine *it = ((machine *)(location));
 	  it->current_frame = repair_reference(it->current_frame);
 	  it->base_frame = repair_reference(it->base_frame);
 	  it->accum = repair_reference(it->accum);
      } else if (type == FRAME){
-	  //printf("collecting a frame\n");
+	 //printf("collecting a frame\n");
 	  frame *it = ((frame *)(location));
 	  it->next = repair_reference(it->next);
 	  it->rib = repair_reference(it->rib);
@@ -278,13 +291,12 @@ void collectify()
 	  it->below = repair_reference(it->below);
      } else if (type == CLOSURE_OP ||
 		type == MACHINE_FLAG){
-	  // printf("collecting an operation\n");
+	 //printf("collecting an operation\n");
 	  operation *it = ((operation *)(location));
 	  it->closure = repair_reference(it->closure);
 	  it->next = repair_reference(it->next);
      } else {
-	  // printf("type: %d from %d to ?", type, memory_b->from->offset);
-
+	 //printf("type: %d from %d to ?", type, memory_b->from->offset);
 	  return;
      }
      next_reference(memory_b);
@@ -313,6 +325,8 @@ void print_type(obj_type type)
      } else if (type == CLOSURE_OP ||
 		type == MACHINE_FLAG){
 	  printf("operation!");
+     } else if (type == DREF){
+	 printf("dref.");
      } else {
 	  printf("WTF is a %d?", type);
      }
@@ -335,10 +349,15 @@ void print_heapi(memory *a)
 }
 
 void print_heap(memory *a){
+    memory_block *from = a->from->block;
+    int fromoff = a->from->offset;
      a->from->block = a->first;
      a->from->offset = 0;
      printf("start of heap\n");
      print_heapi(a);
+     a->from->block = from;
+     a->from->offset = fromoff;
+
 }
 
 

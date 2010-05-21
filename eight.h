@@ -15,11 +15,12 @@ typedef struct operation_struct operation;
 typedef struct frame_struct frame;
 
 typedef enum  {
-  EMPTY, REFERENCE, // for garbage collecting
-  NIL, CONS_PAIR, NUMBER, INTERNAL, CHARACTER, SYMBOL, CONTINUATION, 
-  BUILTIN, C_OBJECT,  
-  MACHINE_FLAG, CLOSURE_OP, /// these are operation types
-  MACHINE, FRAME, CONS_CELL /// etc
+    EMPTY, REFERENCE,// for garbage collecting
+    NIL, CONS_PAIR, NUMBER, INTERNAL, CHARACTER, SYMBOL, CONTINUATION, 
+    BUILTIN, C_OBJECT,  
+    DREF, // doubleref types
+    MACHINE_FLAG, CLOSURE_OP, /// these are operation types
+    MACHINE, FRAME, CONS_CELL /// etc
 } obj_type;
 
 typedef enum {
@@ -62,21 +63,27 @@ typedef struct {
      closure *cdr;
 } cons_cell;
 
+typedef struct {
+    obj_type type;
+    closure *info;
+    union {
+	void      *builtin_fn;
+	void      *c_object;
+	machine   *mach;
+	symbol_id  symbol_id;
+	wchar_t    character;
+	int        num;
+	cons_cell *cons;
+	void      *obj;
+    };
+} doubleref;
+
 struct closure_struct {
-     obj_type    type;
-     closure *closing;
-     closure *info;
-     union {
-	  void    *builtin_fn;
-	  void    *c_object;
-	  machine *mach;
-	  symbol_id symbol_id;
-	  wchar_t    character;
-	  int     num;
-	  cons_cell *cons;
-	  void    *obj;
-     };
+    obj_type   type;
+    closure   *closing;
+    doubleref *in;
 };
+
 
 
 typedef struct memory_block_struct memory_block;
@@ -163,6 +170,7 @@ closure *rectify_closing(closure *closed);
 closure *cheap_acons(closure *sym, closure *val, closure *closing);
 closure *assoc(closure *sym, closure *closing);
 closure *append(closure *a, closure *b);
+closure *cheap_append(closure *a, closure *b);
 int length(closure *a);
 
 // closings
@@ -218,7 +226,7 @@ closure * build_signal(closure *a, machine *m);
 closure *string(wchar_t * str);
 int stringp(closure* a);
 closure* character(wchar_t a);
-closure *string_to_number(closure *a);
+wchar_t* string_to_c_MALLOC(closure *a);
 
 // parsing
 closure *parse_file(FILE *file);

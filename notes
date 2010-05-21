@@ -17,4 +17,4 @@ Parser: Handle positive integers, no more. Fancy number read-macros can come lat
 Strings. Comments. 
 
 So I need a newline test, a whitespace test, alpha, num, and char equality.
-Don't currently have a way of inputing chars...
+

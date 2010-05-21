@@ -9,11 +9,13 @@
 				      m->current_frame))     		
 
 #define intern_fn(fn_name, fn_pointer, lambda_list, m)	do {		\
-          sym = new(closure);		        	      		\
-	  sym->type = BUILTIN;						\
-	  sym->builtin_fn = fn_pointer;					\
+          sym = new(closure);						\
+	  sym->in = new(doubleref);					\
+	  sym->in->type = BUILTIN;     					\
+	  sym->type = DREF;						\
+	  sym->in->builtin_fn = fn_pointer;				\
 	  sym->closing = nil();						\
-	  sym->info = nil();						\
+	  sym->in->info = nil();					\
 	  internal_set(symbol(string_to_symbol_id(L""#fn_name)),	\
 		       cons(lambda_list, cons(sym, nil())),		\
 		       m->current_frame,                                \
@@ -24,14 +26,14 @@
 void set_fn(machine *m)
 {
      closure *a = get_arg(a, m);
-     if (a->type != SYMBOL){
+     if (a->in->type != SYMBOL){
 	  closure *sig = build_signal(cons(string(L"\n\nHolding a clay pot\nI could call the mouth of it an umbilical cord\n o mother-universe, where is the child that was born in the kiln-fire?\n\n\nerror: I attempted to set! something that isn't a symbol: "), cons(a, nil())), m);
        	  toss_signal(sig, m);
      } else {
-	  a = symbol(a->symbol_id);
-	  closure *b = get_arg(b, m);
-	  internal_set(a, b, m->current_frame->below, m->base_frame);
-	  m->accum = b;
+	 a = symbol(a->in->symbol_id);
+	 closure *b = get_arg(b, m);
+	 internal_set(a, b, m->current_frame->below, m->base_frame);
+	 m->accum = b;
      }
 }
 
@@ -78,7 +80,7 @@ void cons_fn(machine *m)
 void car_fn(machine *m)
 {
      closure *acons = get_arg(cons, m);
-     if (acons->type != CONS_PAIR && !nilp(acons)){
+     if (acons->in->type != CONS_PAIR && !nilp(acons)){
        closure *sig = build_signal(cons(string(L"\n\nfinding the thousand things\nreflected within the tao\nis beyond me.\n\n\nerror: I attempted to retrieve the car from something that was not a cons pair: "), cons(acons, nil())), m);
        toss_signal(sig, m);
      } else {
@@ -91,7 +93,7 @@ void car_fn(machine *m)
 void cdr_fn(machine *m)
 {
      closure *acons = get_arg(cons, m);
-     if (acons->type != CONS_PAIR && acons->type != NIL){
+     if (acons->in->type != CONS_PAIR && acons->in->type != NIL){
        closure *sig = build_signal(cons(string(L"\n\nleaves rot on the warm dirt\nwhile the tree drinks rain\n he is not naked\n\n\nerror: I attempted to retrieve the cdr from something that is not a cons pair: "), cons(acons, nil())), m);
        toss_signal(sig, m);
      } else {
@@ -102,7 +104,7 @@ void cdr_fn(machine *m)
 void atomp_fn(machine *m)
 {
      closure *a = get_arg(a, m);
-     if (a->type != CONS_PAIR){
+     if (a->in->type != CONS_PAIR){
 	  m->accum = a;
      } else {
 	  m->accum = nil();
@@ -136,7 +138,7 @@ void closing_of_fn(machine *m)
 void leak_fn(machine *m)
 {
      closure *sym = get_arg(sym, m);
-     if (sym->type != SYMBOL && !nilp(sym)){
+     if (sym->in->type != SYMBOL && !nilp(sym)){
        closure *sig = build_signal(cons(string(L"\n\nHow can I forget\nthe juice of the orange\nthat is still dripping from my chin\n\n\nerror: I attempted to leak something that isn't a symbol: "), cons(sym, nil())), m);
        //  printf("You leaked a non symbol, man \n");
 	  //print_closure((closure *) 5);
@@ -145,7 +147,7 @@ void leak_fn(machine *m)
           closure *clos = copy_closure(get_arg(closure, m));
 	  closure *isit = assoc(sym, clos->closing);
 	  if (!nilp(isit)){
-                isit->cons->car = symbol(LEAKED);
+                isit->in->cons->car = symbol(LEAKED);
 	  } else {
 	        clos->closing = cheap_acons(sym, symbol(LEAKED), clos->closing);
 	  }
@@ -168,9 +170,11 @@ void callcc_fn(machine *m)
 {    
      closure *fn = get_arg(fn, m);
      closure *ret = new(closure);
-     ret->type = CONTINUATION;
+     ret->in = new(doubleref);
+     ret->in->type = CONTINUATION;
+     ret->type = DREF;
      ret->closing = nil();
-     ret->mach = stack_copy(m);
+     ret->in->mach = stack_copy(m);
      // (quote ((a) ret))
      closure *cont = quote(cons(cons(make_arg(a),  nil()),
 				cons(ret, nil())));
@@ -215,8 +219,10 @@ void toss_signal(closure* sig, machine* m)
 closure * build_signal(closure *a, machine *m)
 {
      closure *ret = new(closure);
-     ret->type = CONTINUATION;
-     ret->mach = stack_copy(m);
+     ret->in = new(doubleref);
+     ret->in->type = CONTINUATION;
+     ret->type = DREF;
+     ret->in->mach = stack_copy(m);
      ret->closing = nil();
      // (quote ((a) ret))
      closure *cont = cons(cons(make_arg(a),  nil()),
@@ -264,27 +270,27 @@ void base_handler(machine *m){
 void plus_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     m->accum = number(a->num + b->num);
+     m->accum = number(a->in->num + b->in->num);
 }
 void minus_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     m->accum = number(a->num - b->num);
+     m->accum = number(a->in->num - b->in->num);
 }
 void multiply_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     m->accum = number(a->num * b->num);
+     m->accum = number(a->in->num * b->in->num);
 }
 void divide_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     m->accum = number(a->num / b->num);
+     m->accum = number(a->in->num / b->in->num);
 }
 void greater_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     if (a->num > b->num)
+     if (a->in->num > b->in->num)
        m->accum = symbol(T);
      else 
        m->accum = nil();
@@ -292,7 +298,7 @@ void greater_fn(machine *m){
 void less_fn(machine *m){     
      closure *a = get_arg(a, m);
      closure *b = get_arg(b, m);
-     if (a->num < b->num)
+     if (a->in->num < b->in->num)
        m->accum = symbol(T);
      else 
        m->accum = nil();
@@ -306,13 +312,66 @@ void id_fn(machine *m){
 void set_info_fn(machine *m){
     closure *a = get_arg(a, m);
     closure *info = get_arg(info, m);
-    a->info = info;
+    a->in->info = info;
     m->accum = a;
 }
 
-void get_info_fn(machine *m){
+void get_info_fn(machine *m)
+{
     closure *a = get_arg(a, m);
-    m->accum = a->info;
+    if(a->in->info){
+	m->accum = a->in->info;
+    } else{
+	m->accum = nil();
+    }
+}
+
+void whitespacep_fn(machine *m)
+{
+    closure *a = get_arg(char, m);
+    if(iswspace(a->in->character)){
+	m->accum = symbol(T);
+    } else {
+	m->accum = nil();
+    }
+}
+
+void read_file_fn(machine *m)
+{
+    // This is stupid and will be until glibc 2.2
+    // For now we have to convert files from wchar to char.
+    closure *a = get_arg(filename, m);
+    closure *handle = new(closure);
+    handle->in = new(doubleref);
+    handle->in->type = C_OBJECT;
+    handle->type = DREF;
+    handle->in->info = nil();
+    handle->closing = nil();
+    wchar_t *fn = string_to_c_MALLOC(a);
+    char *rfn = calloc(wcslen(fn), sizeof(char));
+    wcstombs(rfn, fn, wcslen(fn));
+    handle->in->obj = (void *)fopen(rfn, "r");
+    if(handle->in->obj == NULL){
+	closure *sig = build_signal(cons(string(L"\n\nI organized the leaves by color\ngreen, red, gold, brown\nspread out for miles beneath the bare trees\nbut after I placed the last one\nthere was still a bare spot of dirt.\n\n\nerror: I attempted to open a file and failed: "), cons(a, nil())), m);
+	toss_signal(sig, m);
+    }
+    free(fn);
+    free(rfn);
+    m->accum = handle;
+}
+
+void close_file_fn(machine *m)
+{
+    closure *handle = get_arg(handle, m);
+    fclose((FILE *)handle->in->obj);
+    m->accum = nil();
+}
+
+void read_char_fn(machine *m)
+{
+    closure *handle = get_arg(handle, m);
+    wchar_t c = fgetwc((FILE *)handle->in->obj);
+    m->accum = character(c);
 }
 //------------------------------- FFI --------------------------------//
 
@@ -438,6 +497,13 @@ void new_basic_commands(machine *m)
 
      intern_fn(get-info, &get_info_fn, cons(make_arg(a), nil()), m);
 
+     intern_fn(whitespace-p, &whitespacep_fn, cons(make_arg(char), nil()), m);
+
+     intern_fn(read-file, &read_file_fn, cons(make_arg(filename), nil()), m);
+
+     intern_fn(close-file, &close_file_fn, cons(make_arg(handle), nil()), m);
+
+     intern_fn(read-character, &read_char_fn, cons(make_arg(handle), nil()), m);
 }    
 
 #endif

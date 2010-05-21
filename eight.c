@@ -46,21 +46,21 @@ machine *init_8VM()
 closure *cleari()
 {
      closure *cleari = symbol(CLEAR); 
-     cleari->type = INTERNAL;
+     cleari->in->type = INTERNAL;
      return cleari;
 }
 
 closure *e_argument() 
 {
      closure *e_argument = symbol(E_ARGUMENT); 
-     e_argument->type = INTERNAL;
+     e_argument->in->type = INTERNAL;
      return e_argument;
 }
 
 
 int nilp(closure *x)
 {
-     if(x->type == NIL) return 1;
+     if(x->in->type == NIL) return 1;
      return 0;
 }
 
@@ -68,8 +68,10 @@ closure *symbol(symbol_id id)
 {
      // builds a symbol-closure from an id.
      closure *sym = new(closure);
-     sym->type = SYMBOL;
-     sym->symbol_id = id;
+     sym->in = new(doubleref);
+     sym->in->type = SYMBOL;
+     sym->type = DREF;
+     sym->in->symbol_id = id;
      sym->closing = nil();
      return sym; 
 }
@@ -77,16 +79,18 @@ closure *symbol(symbol_id id)
 int leakedp(closure *x)
 {
      closure *y = cheap_car(x);
-     if(y->type == SYMBOL && y->symbol_id == LEAKED) return 1;
+     if(y->in->type == SYMBOL && y->in->symbol_id == LEAKED) return 1;
   return 0;
 }
 
 closure *number(int num)
 {
-  closure *ret = new(closure); 
-  ret->type = NUMBER;
+  closure *ret = new(closure);
+  ret->in = new(doubleref);
+  ret->in->type = NUMBER;
+  ret->type = DREF;
   ret->closing = nil();
-  ret->num = num;
+  ret->in->num = num;
   return ret;
 }
 
@@ -99,7 +103,7 @@ closure *quote(closure *x)
 closure *e_arg()
 {
      closure *a = symbol(E_ARGUMENT);
-     a->type = INTERNAL;
+     a->in->type = INTERNAL;
      return a;
 }
 
@@ -107,7 +111,7 @@ int equal(closure *a, closure *b)
 {
      if ((a==b) ||
 	 (nilp(a) && nilp(b)) ||
-	 ((a->type == b->type) && (a->obj == b->obj)))
+	 ((a->in->type == b->in->type) && (a->in->obj == b->in->obj)))
 	  return 1;
      return 0;
 }
@@ -116,9 +120,11 @@ int equal(closure *a, closure *b)
 closure *cheap_cons(closure *car, closure *cdr)
 {
      closure *pair = new(closure);
+     pair->in = new(doubleref);
+     pair->in->type = CONS_PAIR;
      cons_cell *inner = new(cons_cell);
-     pair->type = CONS_PAIR;
-     pair->cons = inner;
+     pair->type = DREF;
+     pair->in->cons = inner;
      inner->car = car;
      inner->cdr = cdr;
      inner->type = CONS_CELL;
@@ -136,23 +142,25 @@ closure *copy_closure(closure *x)
 closure *cons(closure *car, closure *cdr)
 {
      closure *pair = new(closure);
+     pair->in = new(doubleref);
+     pair->in->type = CONS_PAIR;
      cons_cell *cpair = new(cons_cell);
      cpair->type = CONS_CELL;
-     pair->type = CONS_PAIR;
-     pair->cons = cpair;
+     pair->type = DREF;
+     pair->in->cons = cpair;
      if (nilp(cdr)) {
 	  closure *newcar = copy_closure(car);
 	  pair->closing = car->closing;
 	  newcar->closing = nil();
-	  pair->cons->car = newcar;
-	  pair->cons->cdr = nil();
+	  pair->in->cons->car = newcar;
+	  pair->in->cons->cdr = nil();
 	  cdr->closing = nil();
      } else if (nilp(car)){
 	  closure *newcdr = copy_closure(cdr);
 	  pair->closing = cdr->closing;
 	  newcdr->closing = nil();
-	  pair->cons->cdr = newcdr;
-	  pair->cons->car = nil();
+	  pair->in->cons->cdr = newcdr;
+	  pair->in->cons->car = nil();
 	  car->closing = nil();
      } else {	
 	  closure *newa = nil();
@@ -169,8 +177,8 @@ closure *cons(closure *car, closure *cdr)
 	  ncar->closing = newa;
 	  ncdr->closing = newb;
 	  pair->closing = newc;
-	  pair->cons->car = ncar;
-	  pair->cons->cdr = ncdr;
+	  pair->in->cons->car = ncar;
+	  pair->in->cons->cdr = ncdr;
      }
      return pair;
 };
@@ -189,22 +197,22 @@ void combine(closure *a,
      if (nilp(a)){ // halt condition
 	  return;
      }
-     closure *seen = assoc(car(car(a)), *ret); // look for symbol
+     closure *seen = assoc(cheap_car(cheap_car(a)), *ret); // look for symbol
                                                // in the new closure;
      if(nilp(seen)){ // if it isn't there, then check for conflicts...
                      // look for symbol in b...
 
-	  closure *duplicate = assoc(car(car(a)), b);
+	  closure *duplicate = assoc(cheap_car(cheap_car(a)), b);
 	  if(nilp(duplicate) || 
-	     equal(car(duplicate), second(car(a)))){ 
+	     equal(cheap_car(duplicate), cheap_car( cheap_cdr (cheap_car(a))))){ 
 	       // No conflict? Then toss it in ret.
-	       *ret = cheap_cons(car(a), *ret);
+	       *ret = cheap_cons(cheap_car(a), *ret);
 	  } else {
-	       *newa = cheap_cons(car(a), *newa);
-	       *newb = cheap_cons(cheap_cons(car(car(a)), duplicate), *newb);
+	       *newa = cheap_cons(cheap_car(a), *newa);
+	       *newb = cheap_cons(cheap_cons(cheap_car(cheap_car(a)), duplicate), *newb);
 	  }
      }
-     combine(cdr(a), b, newa, newb, ret); 
+     combine(cheap_cdr(a), b, newa, newb, ret); 
 }
 
 
@@ -216,18 +224,18 @@ closure *rectify_closing(closure *closed)
 
 closure *rectify_closing_i(closure *closed, closure *closing, closure *ret)
 {
-     if (closed->type == SYMBOL){
+     if (closed->in->type == SYMBOL){
 	  closure* value = assoc(closed, closing);
 	  if (!nilp(value)){
 	       ret = cheap_acons(closed,
-				 value->cons->car, 
+				 value->in->cons->car, 
 				 ret);
 	  }
-     } else if (closed->type == CONS_PAIR && !quotep(closed)){
-	  ret = rectify_closing_i(closed->cons->car,
+     } else if (closed->in->type == CONS_PAIR && !quotep(closed)){
+	  ret = rectify_closing_i(closed->in->cons->car,
 				  closing,
 				  ret);
-	  ret = rectify_closing_i(closed->cons->cdr, 
+	  ret = rectify_closing_i(closed->in->cons->cdr, 
 				  closing,
 				  ret);
      }
@@ -237,13 +245,13 @@ closure *rectify_closing_i(closure *closed, closure *closing, closure *ret)
 closure *cheap_car(closure *x)
 {
      if (nilp(x)) return x;
-     return x->cons->car;
+     return x->in->cons->car;
 }
 
 closure *cheap_cdr(closure *x)
 {
      if (nilp(x)) return x;
-     return x->cons->cdr;
+     return x->in->cons->cdr;
 }
 	       
 closure *car(closure *x)
@@ -251,12 +259,12 @@ closure *car(closure *x)
      if (nilp(x)) return x;
      //if (x->type != CONS_PAIR) return NULL;
      if (nilp(x->closing)){
-	  return copy_closure(x->cons->car);
-     } else if (nilp(x->cons->car)){
+	  return copy_closure(x->in->cons->car);
+     } else if (nilp(x->in->cons->car)){
 	  return nil();
      } else {
-	  closure *clo = copy_closure(x->cons->car);
-	  clo->closing = append(clo->closing, x->closing);
+	  closure *clo = copy_closure(x->in->cons->car);
+	  clo->closing = cheap_append(clo->closing, x->closing);
      	  return rectify_closing(clo);
      } 
 }
@@ -266,12 +274,12 @@ closure *cdr(closure *x)
      if (nilp(x)) return x;
      //if (x->type != CONS_PAIR) return NULL;
      if (nilp(x->closing)){
-	  return copy_closure(x->cons->cdr);
-     } else if (nilp(x->cons->cdr)){
+	  return copy_closure(x->in->cons->cdr);
+     } else if (nilp(x->in->cons->cdr)){
 	  return nil();
      } else {
-	  closure *clo = copy_closure(x->cons->cdr);
-	  clo->closing = append(clo->closing, x->closing);
+	  closure *clo = copy_closure(x->in->cons->cdr);
+	  clo->closing = cheap_append(clo->closing, x->closing);
      	  return rectify_closing(clo);
      } 
 }
@@ -284,6 +292,16 @@ closure *append(closure *a, closure *b)
 	  return b;
      } else {
 	  return cons(car(a), append(cdr(a), b));
+     }
+};
+
+closure *cheap_append(closure *a, closure *b)
+{
+     // TODO sanity test a & b for listness.
+     if (nilp(a)){
+	  return b;
+     } else {
+	  return cheap_cons(cheap_car(a), cheap_append(cheap_cdr(a), b));
      }
 };
 
@@ -351,69 +369,72 @@ void internal_set(closure *sym,
 {
      closure *old = looker_up(sym, aframe);
      if (nilp(old)){
+	 printf("new one");
 	  base_frame->scope = cheap_acons(sym,
 					  value,
 					  base_frame->scope);
      } else {
-         old->cons->car = value;
+	 printf("old one:");
+	 print_closure(old);
+	 memcpy(old->in->cons->car, value, sizeof(closure));
      };
 }
 
 int commap(closure *arg)
 {
-     if ((arg->type == CONS_PAIR) &&
-	 (cheap_car(arg)->type == SYMBOL) &&
-	 (cheap_car(arg)->symbol_id == COMMA)) return 1;
+     if ((arg->in->type == CONS_PAIR) &&
+	 (cheap_car(arg)->in->type == SYMBOL) &&
+	 (cheap_car(arg)->in->symbol_id == COMMA)) return 1;
      return 0;
-};
+}
 
 int asterixp(closure *arg)
 {
      // returns true if argument == *x
-     if ((arg->type == CONS_PAIR) &&
-	 (cheap_car(arg)->type == SYMBOL) &&
-	 (cheap_car(arg)->symbol_id == ASTERIX)) return 1;
+     if ((arg->in->type == CONS_PAIR) &&
+	 (cheap_car(arg)->in->type == SYMBOL) &&
+	 (cheap_car(arg)->in->symbol_id == ASTERIX)) return 1;
      return 0;
 };
 int atpendp(closure *arg)
 {
      // returns true if argument == *x
-     if ((arg->type == CONS_PAIR) &&
-	 (cheap_car(arg)->type == SYMBOL) &&
-	 (cheap_car(arg)->symbol_id == ATPEND)) return 1;
+     if ((arg->in->type == CONS_PAIR) &&
+	 (cheap_car(arg)->in->type == SYMBOL) &&
+	 (cheap_car(arg)->in->symbol_id == ATPEND)) return 1;
      return 0;
 };
 int quotep(closure *sym)
 {
      // returns true if argument == *x
-     if ((sym->type == CONS_PAIR) &&
-	 (cheap_car(sym)->type == SYMBOL) &&
-	 (cheap_car(sym)->symbol_id == QUOTE)) return 1;
+     if ((sym->in->type == CONS_PAIR) &&
+	 (cheap_car(sym)->in->type == SYMBOL) &&
+	 (cheap_car(sym)->in->symbol_id == QUOTE)) return 1;
      return 0;
 };
 int elipsisp(closure *sym)
 {
      //returns true if sym == ...
-     if ((sym->type == SYMBOL) &&
-	 (sym->symbol_id == ELIPSIS)) return 1;
+     if ((sym->in->type == SYMBOL) &&
+	 (sym->in->symbol_id == ELIPSIS)) return 1;
      return 0;
 }
 
 int optional_argp(closure *sym)
 {
-     if ((sym->type == CONS_PAIR) &&
-	 (car(sym)->type == SYMBOL) &&
-	 (car(sym)->symbol_id != QUOTE))  return 1;
+     if ((sym->in->type == CONS_PAIR) &&
+	 (cheap_car(sym)->in->type == SYMBOL) &&
+	 (cheap_car(sym)->in->symbol_id != QUOTE))  return 1;
      return 0;
 };
 
 int e_argp(closure *sym)
 {
-     if (((sym->type == INTERNAL) && 
-	  (sym->symbol_id == E_ARGUMENT)) ||
-	 ((sym->type == CONS_PAIR) &&
-	  ((second(sym)->type == INTERNAL) && 
-	   (second(sym)->symbol_id == E_ARGUMENT)))) return 1;
+     if (((sym->in->type == INTERNAL) && 
+	  (sym->in->symbol_id == E_ARGUMENT)) ||
+	 ((sym->in->type == CONS_PAIR) &&
+	  ((second(sym)->in->type == INTERNAL) && 
+	   (second(sym)->in->symbol_id == E_ARGUMENT)))) return 1;
      return 0;
 }
 
@@ -429,7 +450,7 @@ operation *build_argument_chain(closure *lambda_list,
 	  }
 	  // If we're out of lambda list, we're done!
 	  return current;
-     } else if (asterixp(car(arg_list))){
+     } else if (asterixp(cheap_car(arg_list))){
 	  // If the first argument is a *arg, then we need to grab
 	  // the actual argument, which is the ((asterix HERE) ...)
 	  // then we build a continue-apply structure so that we can 
@@ -569,7 +590,7 @@ operation *make_arg(closure *sym, closure *val, operation *current)
 closure *clear_list(closure *args)
 {
      // TODO WARNING; I am not sure what this is for.
-     if (args->type != CONS_PAIR){
+     if (args->in->type != CONS_PAIR){
 	  printf("YOU'RE A POOP HEAD: senseless args to clear_list.");
 	  return nil();
      } else {
@@ -584,7 +605,7 @@ int free_varp(closure *token,
 	      closure *accum,
 	      frame *current_frame)
 {
-     if((token->type == SYMBOL) &&
+     if((token->in->type == SYMBOL) &&
 	(nilp(assoc(token, accum))))  return 1;
      return 0;
 }
@@ -598,16 +619,16 @@ closure *find_free_variables(closure *code,
 	  closure* value = looker_up(code, current_frame);
 	  if (!nilp(value)){
 	       accum = cheap_acons(code, 
-				   car(value), 
+				   cheap_car(value), 
 				   accum);
 	  }
-     } else if (code->type == CONS_PAIR && !quotep(code)){
-	  accum = find_free_variables(code->cons->car,
-				      current_frame, 
-				      accum);
-	  accum = find_free_variables(code->cons->cdr, 
-				      current_frame, 
-				      accum);
+     } else if (code->in->type == CONS_PAIR && !quotep(code)){
+	 accum = find_free_variables(code->in->cons->car,
+				     current_frame, 
+				     accum);
+	 accum = find_free_variables(code->in->cons->cdr, 
+				     current_frame, 
+				     accum);
      }
      return accum;
 }
@@ -722,23 +743,23 @@ int virtual_machine_step(machine *m)
      // to be evaluated plainly.
      if (instruction->type == CLOSURE_OP){
 
-	  if (instruction->closure->type == BUILTIN){
+	  if (instruction->closure->in->type == BUILTIN){
 	       // If it's a builtin function, then we should simply call
 	       // the function pointer and let it figure out what to do.
-	       builtin fn = instruction->closure->builtin_fn;
+	       builtin fn = instruction->closure->in->builtin_fn;
 	       fn(m);
 
 	       
-	  } else if (instruction->closure->type == CONTINUATION){
+	  } else if (instruction->closure->in->type == CONTINUATION){
 	       // A continuation requires looking up the call value
 	       // and putting it in accum, before replacing the machine
 	       // with the one contained inside the continuation.
 	       m->accum = car(looker_up(symbol(string_to_symbol_id(L"a")), 
 					m->current_frame));
-	       m->base_frame = instruction->closure->mach->base_frame;
-	       m->current_frame = instruction->closure->mach->current_frame;    
+	       m->base_frame = instruction->closure->in->mach->base_frame;
+	       m->current_frame = instruction->closure->in->mach->current_frame;    
 
-	  } else if (instruction->closure->type == SYMBOL){
+	  } else if (instruction->closure->in->type == SYMBOL){
 	       // A symbol should be looked up, and the result placed in 
 	       // accum. If it is undefined, a signal should be thrown.
 	       closure *res =  looker_up(instruction->closure,
@@ -767,7 +788,7 @@ int virtual_machine_step(machine *m)
 	       m->current_frame->next = cl;
 	       m->current_frame->scope = instruction->closure->closing;
 
-	  } else if (instruction->closure->type != CONS_PAIR){
+	  } else if (instruction->closure->in->type != CONS_PAIR){
 	       // This test is maybe a little dangerous, because it's a
 	       // shortcut for characters, numbers, and other 'literals' that
 	       // return themselves when evaluated. (3 -> 3)
@@ -779,7 +800,7 @@ int virtual_machine_step(machine *m)
 				  m->current_frame);
 	       // TODO sanity check, is lonely cdr?
 
-	  } else if (car(instruction->closure)->symbol_id == CLEAR){
+	  } else if (car(instruction->closure)->in->symbol_id == CLEAR){
 	       // Clear is necessary for atpend. Return
 	       // the object that has been tagged to clear.
 	       m->accum = car(cdr(instruction->closure));
@@ -866,7 +887,7 @@ int virtual_machine_step(machine *m)
 		    // TODO: This is slow, and might be better done backwards
 		    // with an extra 'reverse' at the end.
 		    closure *last = cdr(car(m->current_frame->rib));
-		    last->cons->car = append(last->cons->car,
+		    last->in->cons->car = append(last->in->cons->car,
 					     cons(m->accum, nil()));
 			 
 	       } else {

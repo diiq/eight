@@ -2,25 +2,25 @@
 
 void print_closure(closure *a)
 {
-     if (a->type == SYMBOL) {
-	  wchar_t* sym = symbol_id_to_string(a->symbol_id);
+     if (a->in->type == SYMBOL) {
+	  wchar_t* sym = symbol_id_to_string(a->in->symbol_id);
 	  printf("%ls", sym);
-     } else if (a->type == NUMBER) {
-	  printf("%d", a->num);
-     } else if (a->type == CHARACTER) {
-          printf("%c", a->character);
-     } else if (a->type == NIL) {
+     } else if (a->in->type == NUMBER) {
+	  printf("%d", a->in->num);
+     } else if (a->in->type == CHARACTER) {
+          printf("$%c", a->in->character);
+     } else if (a->in->type == NIL) {
 	  printf("()");
      } else if (stringp(a)) {
           print_string(a);
-     } else if (a->type == CONS_PAIR){
+     } else if (a->in->type == CONS_PAIR){
 	  printf("(");
 	  print_cons(a);
 	  printf(")");
-     } else if (a->type == NIL){
+     } else if (a->in->type == NIL){
 	  printf("()");
      }  else {
-	 printf("v%d", (int)a->obj);
+	 printf("v%d", (int)a->in->obj);
      }
     
      //  if(!nilp(a->closing)){
@@ -32,15 +32,15 @@ void print_closure(closure *a)
 
 void print_cons(closure *cons)
 {
-     print_closure(cons->cons->car);
-     if (cdr(cons)->type == CONS_PAIR){
+     print_closure(cons->in->cons->car);
+     if (cdr(cons)->in->type == CONS_PAIR){
 	  printf(" ");
-	  print_cons(cons->cons->cdr);
-     } else if (cdr(cons)->type == NIL){
+	  print_cons(cons->in->cons->cdr);
+     } else if (cdr(cons)->in->type == NIL){
        //printf("()");
      } else {
 	  printf(" . ");
-	  print_closure(cons->cons->cdr);
+	  print_closure(cons->in->cons->cdr);
      }
 }
 
@@ -85,9 +85,9 @@ void print_stack(frame *fm)
       
 void print_string_internal(closure *a)
 {
-  if (a->type == NIL)
+  if (a->in->type == NIL)
     return;
-  printf("%c", car(a)->character);
+  printf("%c", car(a)->in->character);
   print_string_internal(cdr(a));
 }
 

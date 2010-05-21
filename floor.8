@@ -25,3 +25,65 @@
 			      (cons (cons (' function-name) (cons name ())) ())))))
 
 
+(def no (x) (is x ()))
+
+(def cons-p (x) (no (atom-p x)))
+
+(def copylist (xs)
+  (oif (no xs)
+      ()
+      (cons (car xs) (copylist (cdr xs)))))
+
+(def list (... args) (copylist args))
+
+
+
+
+(def newline-p (char) (is char $
+))
+
+(def open-paren-p (char) (is char $( ))
+
+(def close-paren-p (char) (is char $) ))
+
+(def doublequote-p (char) (is char $" )) $"
+
+(def backslash-p (char) (is char $\ ))
+
+(set! first-table ())
+
+(def add-first-function (test function)
+     (set! first-table (cons (list test function) first-table)))
+
+(def first (xs)
+     (inner-first xs first-table))
+
+(def inner-first (xs table)
+     (oif ((car (car table)) xs)
+	  ((car (cdr (car table))) xs)
+	  (inner-first xs (cdr table))))
+
+(add-first-function (fn (xs) (' t)) (fn (xs) (signal (list "
+
+The ten thousand things
+unshatter
+the film of an explosion
+played in reverse.
+
+error: I tried to take the first element of something I don't know how to take the first element of:" xs))))
+
+(add-first-function (fn (xs) (cons-p xs)) (fn (xs) (car xs)))  
+
+(add-first-function (fn (xs) (is (get-info xs) (' poop))) (fn (xs) (' hallo)))
+
+
+(set! a (' (1 2 3 4 5)))
+
+(print (first a))
+
+(set-info a (' poop))
+
+(print (first a))
+
+
+ 

@@ -84,7 +84,7 @@ closure* string_to_symbol(closure *a){
     wchar_t name[50] = {L'\0'};
     int i = 0;
     for(i=0; i<l; i++){
-	name[i] = car(a)->character;
+	name[i] = car(a)->in->character;
 	a = cdr(a);
     }
     return symbol(string_to_symbol_id(name));
