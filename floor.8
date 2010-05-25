@@ -1,5 +1,3 @@
-(' hallo)
-
 (base-signal-handler (' ((q) (print q))))
 
 (set! unlambda (' ((list)
@@ -21,15 +19,14 @@
 
 (set! def (fn ((' name) (' lambda-list) ... (' code))
               (set! (, name) 
-		    (set-info (fn (, lambda-list) (* code)) 
-			      (cons (cons (' function-name) (cons name ())) ())))))
+		    (set-info (fn (, lambda-list) (* code)) 	
+		      (cons (cons (' function-name) 
+					  (cons name ())) ())))))
 
 
 (def no (x) (is x ()))
 
 (def cons-p (x) (no (atom-p x)))
-
-poop
 
 (base-signal-handler (fn (q) 
 			 (oif (cons-p (car (cdr q))) 
@@ -93,8 +90,7 @@ Try using a poem, next time."))
 
 (add-first-function (fn (xs) (' t)) (fn (xs) (signal (list "
 
-The ten thousand things
-unshatter
+The ten thousand things unshatter
 the film of an explosion
 played in reverse.
 
@@ -113,10 +109,9 @@ error: I tried to take the first element of something I don't know how to take t
 	      
 (add-rest-function (fn (xs) (' t)) (fn (xs) (signal (list "
 
-The ten thousand things
-unshatter
-the film of an explosion
-played in reverse.
+a man akimbo
+suddenly pulls his fist to his breast
+as he quietly accumulates
 
 error: I tried to take the rest of something I don't know how to take the rest of:" xs))))
 
@@ -129,7 +124,81 @@ error: I tried to take the rest of something I don't know how to take the rest o
 			(set-cdr xs (list (read-character (car (cdr xs)))
 					  (car (cdr xs))))
 			(cdr xs)))
-			
+	
+(set! join cons)
 
+		
+(def pair (xs (f list)) 
+     (oif (no xs)
+          ()
+         (oif (no (rest xs))
+	      (list (list (first xs)))
+	      (join (f (first xs) (first (rest xs)))
+		       (pair (rest (rest xs)) f)))))
+
+(set! parse-table ())
 				
+(def add-parse-state ((' name) ... transitions)
+     (set! parse-table (join 
+			(join name (pair transitions))
+			parse-table)))
 
+(def parse (stream)
+     (parse-inner (' null) stream () parse-table))
+
+(def parse-inner (state stream accum table)
+     (print state)
+     (oif (no (is state (' terminate)))
+	  (oif stream
+	       (parse-inner (@ (parse-transition stream 
+						 accum
+						 (assoc state table))) table)
+	       accum) accum))
+
+(def parse-transition (stream accum transition-list)
+     (oif ((first (first transition-list)) stream)
+	  ((first (rest (first transition-list))) stream accum)
+	  (parse-transition stream accum (rest transition-list))))
+
+
+(set! comment-character-code ())
+
+(def set-comment-character (char)
+      (set! comment-character-code
+	    (list (fn (stream) 
+		      (oif (is (first stream) char)
+			   (' t) ()))
+
+		  (fn (stream accum)
+		      (list (' comment)
+			    (rest stream)
+			    accum)))))
+
+(set-comment-character $#)
+
+(add-parse-state null 
+		 (@ comment-character-code)
+
+		 (fn (stream) (' t))
+		 (fn (stream accum)
+		     (list (' terminate) 
+			   stream 
+			   (' pooper))))
+
+(add-parse-state comment
+		 (fn (stream) (no (newline-p (first stream))))
+		 (fn (stream accum)
+		     (list (' comment) 
+			   (rest stream) 
+			   accum))
+
+		 (fn (stream) (' t))
+		 (fn (stream accum)
+		     (list (' null) 
+			   (rest stream) 
+			   accum)))
+
+
+(parse "# this is a comment
+#so is this
+This isn't and will terminate.")

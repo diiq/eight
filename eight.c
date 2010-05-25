@@ -120,14 +120,15 @@ int equal(closure *a, closure *b)
 closure *cheap_cons(closure *car, closure *cdr)
 {
      closure *pair = new(closure);
+     pair->type = DREF;
      pair->in = new(doubleref);
      pair->in->type = CONS_PAIR;
      cons_cell *inner = new(cons_cell);
-     pair->type = DREF;
+     inner->type = CONS_CELL;
+ 
      pair->in->cons = inner;
      inner->car = car;
      inner->cdr = cdr;
-     inner->type = CONS_CELL;
      pair->closing = nil();
      return pair;
 }
@@ -259,7 +260,7 @@ closure *car(closure *x)
      if (nilp(x)) return x;
      //if (x->type != CONS_PAIR) return NULL;
      if (nilp(x->closing)){
-	  return copy_closure(x->in->cons->car);
+	 return copy_closure(x->in->cons->car);
      } else if (nilp(x->in->cons->car)){
 	  return nil();
      } else {
@@ -586,16 +587,17 @@ operation *make_arg(closure *sym, closure *val, operation *current)
 
 closure *clear_list(closure *args)
 {
-     // TODO WARNING; I am not sure what this is for.
-     if (args->in->type != CONS_PAIR){
-	  printf("YOU'RE A POOP HEAD: senseless args to clear_list.");
-	  return nil();
-     } else {
-	  if (!nilp(cdr(args))) 
-	       return cons(cons(cleari(), cons(car(args), nil())), 
-			   clear_list(cdr(args)));
-	  return  cons(cons(cleari(), cons(car(args), nil())), nil());
-     }
+    // This is for the application of atpend arguments
+    // which must only be evaluated once.
+    if (args->in->type != CONS_PAIR){
+	printf("YOU'RE A POOP HEAD: senseless args to clear_list.");
+	return nil();
+    } else {
+	if (!nilp(cheap_cdr(args))) 
+	    return cheap_cons(cheap_cons(cleari(), cheap_cons(car(args), nil())), 
+			      clear_list(cdr(args)));
+	return  cheap_cons(cheap_cons(cleari(), cheap_cons(car(args), nil())), nil());
+    }
 }
 
 int free_varp(closure *token,
@@ -620,10 +622,10 @@ closure *find_free_variables(closure *code,
 				   accum);
 	  }
      } else if (code->in->type == CONS_PAIR && !quotep(code)){
-	 accum = find_free_variables(code->in->cons->car,
+	 accum = find_free_variables(car(code),
 				     current_frame, 
 				     accum);
-	 accum = find_free_variables(code->in->cons->cdr, 
+	 accum = find_free_variables(cdr(code), 
 				     current_frame, 
 				     accum);
      }
@@ -884,7 +886,7 @@ int virtual_machine_step(machine *m)
 		    // TODO: This is slow, and might be better done backwards
 		    // with an extra 'reverse' at the end.
 		    closure *last = cdr(car(m->current_frame->rib));
-		    last->in->cons->car = append(last->in->cons->car,
+		    last->in->cons->car = append(car(last),
 					     cons(m->accum, nil()));
 			 
 	       } else {
@@ -914,10 +916,11 @@ int virtual_machine_step(machine *m)
 	       closure *args = clear_list(m->accum);
 	       operation* fn=new(operation);
 	       fn->type = CLOSURE_OP;
-	       operation* boo = build_argument_chain(
-		    car(instruction->closure),
-		    append(args, cdr(instruction->closure)),
-		    fn);
+	       operation* boo = 
+		   build_argument_chain(
+		       car(instruction->closure),
+		       cheap_append(args, cdr(instruction->closure)),
+		       fn);
 	       boo->next = m->current_frame->next;
 	       m->current_frame->next = fn->next;
 

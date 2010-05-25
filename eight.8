@@ -50,12 +50,6 @@
 
 (def identity (x) x)
 
-(def if (test 'then ... 'elses)
-  (oif test
-      ,then
-      (oif (cdr elses)
-           (if *elses)
-           ,(car elses))))
 
 (def map1 (f xs)
   (if xs 
