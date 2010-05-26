@@ -1,4 +1,7 @@
-(base-signal-handler (' ((q) (print q))))
+(set! , comma)
+
+(base-signal-handler (set-info (' ((q) (print q))) 
+			       (cons (cons (' function-name) (cons (' stupid-signal-handler) ())) ())))
 
 (set! unlambda (' ((list)
 		 (oif list (oif (is (car list) (' ...)) 
@@ -10,12 +13,22 @@
 					       (car (cdr (car list)))
 					       (car (car list))))
 				      (unlambda (cdr list)))) ()))))
+
+(set-info unlambda (cons (cons (' function-name) (cons (' lambda) ())) ()))
+
 (set! leak-all (' ((list closure)
 		 (oif list (leak-all (cdr list) 
 				     (leak (car list) closure)) closure))))
 
+(set-info leak-all (cons (cons (' function-name) (cons (' leak-all) ())) ()))
+
 (set! fn (' (((' lambda-list) ... (' code))
-	   (cons lambda-list (leak-all (unlambda lambda-list) code)))))
+	     (set-info (cons lambda-list 
+			     (leak-all (unlambda lambda-list) code))
+	    (cons (cons (' function-name) (cons (' anonymous) ())) ())))))
+
+(set-info fn (cons (cons (' function-name) (cons (' fn) ())) ()))
+
 
 (set! def (fn ((' name) (' lambda-list) ... (' code))
               (set! (, name) 
@@ -23,6 +36,7 @@
 		      (cons (cons (' function-name) 
 					  (cons name ())) ())))))
 
+(set-info def (cons (cons (' function-name) (cons (' def) ())) ()))
 
 (def no (x) (is x ()))
 
@@ -52,6 +66,13 @@ Try using a poem, next time."))
 	    (cdr (car al))
 	    (assoc key (cdr al)))))
 
+(def map1 (f xs)
+  (oif xs 
+       (cons (f (car xs)) 
+	     (map1 f (cdr xs)))))
+
+
+
 (def newline-p (char) (is char $
 ))
 
@@ -60,6 +81,8 @@ Try using a poem, next time."))
 (def close-paren-p (char) (is char $) ))
 
 (def doublequote-p (char) (is char $" )) $"
+
+(def character-marker-p (char) (is char $$ ))
 
 (def backslash-p (char) (is char $\ ))
 
@@ -120,85 +143,51 @@ error: I tried to take the rest of something I don't know how to take the rest o
 (add-rest-function (fn (xs) (is (car (assoc (' type)
 					     (get-info (car (cdr xs)))))
 				 (' stream)))
-		    (fn (xs) 
-			(set-cdr xs (list (read-character (car (cdr xs)))
-					  (car (cdr xs))))
-			(cdr xs)))
+		   (fn (xs) 
+		       (set-cdr xs (list (read-character (car (cdr xs)))
+					 (car (cdr xs))))
+		       (cdr xs)))
 	
 (set! join cons)
 
+(def append (xs ys ... (' yss))
+  (oif xs
+      (cons (car xs) (append (cdr xs) ys (* yss)))
+      (oif yss
+	   (append ys (* yss))
+	   ys)))
 		
 (def pair (xs (f list)) 
      (oif (no xs)
           ()
-         (oif (no (rest xs))
-	      (list (list (first xs)))
-	      (join (f (first xs) (first (rest xs)))
-		       (pair (rest (rest xs)) f)))))
+	  (oif (no (rest xs))
+	       (list (list (first xs)))
+	       (join (f (first xs) (first (rest xs)))
+		     (pair (rest (rest xs)) f)))))
 
-(set! parse-table ())
-				
-(def add-parse-state ((' name) ... transitions)
-     (set! parse-table (join 
-			(join name (pair transitions))
-			parse-table)))
+(def with ((' parms) ... (' body))
+     ((fn (, (map1 first (pair parms)))
+	  (* body))
+      (* (map1 (fn (x) (first (rest x))) (pair parms)))))
 
-(def parse (stream)
-     (parse-inner (' null) stream () parse-table))
+(def add-parse-state ((' name))
+ 	   (set! (, (string-to-symbol 
+			(append (symbol-to-string name) 
+				"-parse-table"))) ()))
 
-(def parse-inner (state stream accum table)
-     (print state)
-     (oif (no (is state (' terminate)))
-	  (oif stream
-	       (parse-inner (@ (parse-transition stream 
-						 accum
-						 (assoc state table))) table)
-	       accum) accum))
+(def add-parse-action ((' state) test action)
+     (with (table-name (string-to-symbol 
+			(append (symbol-to-string state) 
+				"-parse-table")))
+	   (set! (, table-name) (join (list test action) (, table-name)))))
 
-(def parse-transition (stream accum transition-list)
-     (oif ((first (first transition-list)) stream)
-	  ((first (rest (first transition-list))) stream accum)
-	  (parse-transition stream accum (rest transition-list))))
+ 
 
 
-(set! comment-character-code ())
 
-(def set-comment-character (char)
-      (set! comment-character-code
-	    (list (fn (stream) 
-		      (oif (is (first stream) char)
-			   (' t) ()))
+"When I do the dishes
+I put the glasses away
+upside-down.
+She does not.
 
-		  (fn (stream accum)
-		      (list (' comment)
-			    (rest stream)
-			    accum)))))
-
-(set-comment-character $#)
-
-(add-parse-state null 
-		 (@ comment-character-code)
-
-		 (fn (stream) (' t))
-		 (fn (stream accum)
-		     (list (' terminate) 
-			   stream 
-			   (' pooper))))
-
-(add-parse-state comment
-		 (fn (stream) (no (newline-p (first stream))))
-		 (fn (stream accum)
-		     (list (' comment) 
-			   (rest stream) 
-			   accum))
-
-		 (fn (stream) (' t))
-		 (fn (stream accum)
-		     (list (' null) 
-			   (rest stream) 
-			   accum)))
-
-
-(parse "# this is a comment
-#so is this
-This isn't and will terminate.")
+error: I encountered an unexpected close parenthesis during parsing."

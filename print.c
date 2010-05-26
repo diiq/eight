@@ -20,7 +20,7 @@ void print_closure(closure *a)
      } else if (a->in->type == NIL){
 	  printf("()");
      }  else {
-	 printf("v%d", (int)a->in->obj);
+	 printf("v%p", a->in->obj);
      }
     
      //  if(!nilp(a->closing)){

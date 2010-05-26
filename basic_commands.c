@@ -16,8 +16,13 @@
 	  sym->in->builtin_fn = fn_pointer;				\
 	  sym->closing = nil();						\
 	  sym->in->info = nil();					\
+	  val = cons(lambda_list, cons(sym, nil()));			\
+	  val->in->info =						\
+	      cons(cons(symbol(FUNCTION_NAME),				\
+		   cons(symbol(string_to_symbol_id(L""#fn_name)),	\
+			nil())), nil());				\
 	  internal_set(symbol(string_to_symbol_id(L""#fn_name)),	\
-		       cons(lambda_list, cons(sym, nil())),		\
+		       val,						\
 		       m->current_frame,                                \
                        m->base_frame);                                  \
   } while (0)
@@ -174,6 +179,7 @@ void callcc_fn(machine *m)
      ret->in->type = CONTINUATION;
      ret->type = DREF;
      ret->closing = nil();
+     ret->in->info = nil();
      ret->in->mach = stack_copy(m);
      // (quote ((a) ret))
      closure *cont = quote(cons(cons(make_arg(a),  nil()),
@@ -224,6 +230,7 @@ closure * build_signal(closure *a, machine *m)
      ret->type = DREF;
      ret->in->mach = stack_copy(m);
      ret->closing = nil();
+     ret->in->info = nil();
      // (quote ((a) ret))
      closure *cont = cons(cons(make_arg(a),  nil()),
 			  cons(ret, nil()));
@@ -261,7 +268,6 @@ void base_handler(machine *m){
      closure *handler = get_arg(handler, m);
      m->base_frame->signal_handler = handler;
 }
-
 
 
 //------------------ MATHS!----------------------//
@@ -319,17 +325,23 @@ void set_info_fn(machine *m){
 void get_info_fn(machine *m)
 {
     closure *a = get_arg(a, m);
-    if(a->in->info){
-	m->accum = a->in->info;
-    } else{
-	m->accum = nil();
-    }
+    m->accum = a->in->info;
 }
 
 void whitespacep_fn(machine *m)
 {
     closure *a = get_arg(char, m);
     if(iswspace(a->in->character)){
+	m->accum = symbol(T);
+    } else {
+	m->accum = nil();
+    }
+}
+
+void eof_p_fn(machine *m)
+{
+    closure *c = get_arg(char, m);
+    if(c->in->character == WEOF || c->in->character == EOF){
 	m->accum = symbol(T);
     } else {
 	m->accum = nil();
@@ -389,6 +401,17 @@ void set_cdr_fn(machine *m)
     pair->in->cons->cdr = val;
     m->accum = pair;
 }
+
+void string_to_symbol_fn(machine *m){
+    closure *string = get_arg(string, m);
+    m->accum = string_to_symbol(string);
+}
+
+void symbol_to_string_fn(machine *m){
+    closure *sym = get_arg(sym, m);
+    m->accum = string(symbol_id_to_string(sym->in->symbol_id));
+}
+
 //------------------------------- FFI --------------------------------//
 
 
@@ -443,6 +466,7 @@ void new_basic_commands(machine *m)
 {	  
     // TODO This is still more complicated than it should be.
      closure *sym;
+     closure *val;
 
      intern_fn(is, &is_fn, cons(make_arg(a), cons(make_arg(b), nil())), m);
   
@@ -515,6 +539,8 @@ void new_basic_commands(machine *m)
 
      intern_fn(whitespace-p, &whitespacep_fn, cons(make_arg(char), nil()), m);
 
+     intern_fn(eof-p, &eof_p_fn, cons(make_arg(char), nil()), m);
+
      intern_fn(read-file, &read_file_fn, cons(make_arg(filename), nil()), m);
 
      intern_fn(close-file, &close_file_fn, cons(make_arg(handle), nil()), m);
@@ -526,6 +552,10 @@ void new_basic_commands(machine *m)
 
      intern_fn(set-cdr, &set_cdr_fn, cons(make_arg(cons), 
 					    cons(make_arg(value), nil())), m);
+
+     intern_fn(string-to-symbol, &string_to_symbol_fn, cons(make_arg(string), nil()), m);
+
+     intern_fn(symbol-to-string, &symbol_to_string_fn, cons(make_arg(sym), nil()), m);
 }    
 
 #endif

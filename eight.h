@@ -24,7 +24,7 @@ typedef enum  {
 } obj_type;
 
 typedef enum {
-  DO, APPLY, CONTINUE_APPLY, ATPEND_APPLY, ARGUMENT, E_ARGUMENT, SIGNAL
+    DO, APPLY, CONTINUE_APPLY, ATPEND_APPLY, ARGUMENT, E_ARGUMENT, SIGNAL, FUNCTION_NAME
 } machine_flag;
 
 typedef enum {

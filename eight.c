@@ -35,6 +35,7 @@ machine *init_8VM()
      insert_symbol(L",", COMMA);
      insert_symbol(L"...", ELIPSIS);
      insert_symbol(L"t", T);
+     insert_symbol(L"function-name", FUNCTION_NAME);
 
      internal_set(symbol(T), symbol(T), bframe, bframe);
      new_basic_commands(m);
@@ -73,6 +74,7 @@ closure *symbol(symbol_id id)
      sym->type = DREF;
      sym->in->symbol_id = id;
      sym->closing = nil();
+     sym->in->info = nil();
      return sym; 
 }
 
@@ -90,6 +92,7 @@ closure *number(int num)
   ret->in->type = NUMBER;
   ret->type = DREF;
   ret->closing = nil();
+  ret->in->info = nil();
   ret->in->num = num;
   return ret;
 }
@@ -130,6 +133,7 @@ closure *cheap_cons(closure *car, closure *cdr)
      inner->car = car;
      inner->cdr = cdr;
      pair->closing = nil();
+     pair->in->info = nil();
      return pair;
 }
 
@@ -145,6 +149,7 @@ closure *cons(closure *car, closure *cdr)
      closure *pair = new(closure);
      pair->in = new(doubleref);
      pair->in->type = CONS_PAIR;
+     pair->in->info = nil();
      cons_cell *cpair = new(cons_cell);
      cpair->type = CONS_CELL;
      pair->type = DREF;
@@ -444,7 +449,7 @@ operation *build_argument_chain(closure *lambda_list,
      // builds the operations necessary to evaluate the arguments of a fn.
      if (nilp(lambda_list)) {
 	  if (!nilp(arg_list)) {
-	       return -1;
+	      return (operation *)-1;
 	  }
 	  // If we're out of lambda list, we're done!
 	  return current;
@@ -836,44 +841,49 @@ int virtual_machine_step(machine *m)
 	  // move on to machine flag instructions.
 
 	  if (instruction->flag == APPLY) {
-	       // The APPLY step adds a new frame to the stack (unless
-	       // there's a tail-call), prepares the 'rib' (which will
-	       // become the scope of the new function call), builds the
-	       // argument chain (which is a series of instructions that 
-	       // evaluate the arguments before actually performing the 
-	       // function. 
-
-	       frame* n_frame;
-	       if ((m->current_frame->next == NULL) && 
-		   (m->current_frame != m->base_frame)){
-		    n_frame = m->current_frame;
-	       } else {
-		    n_frame = new_frame(m->current_frame);
-	       }
-	       n_frame->rib = m->accum->closing;
-
-	       operation* fn=new(operation);
-	       fn->type = MACHINE_FLAG;
-	       fn->flag = DO; 
-	       fn->closure = m->accum;
-	       m->current_frame = n_frame;
-	       operation* chain=build_argument_chain(fn_lambda_list(m->accum),
-						     instruction->closure,
-						     fn);
-
-	       if(chain == -1){
-		    closure *sig = build_signal(cons(string(L"\n\n\nClouds drift into my window\nbut they don't drift out again\nsoon the frame will burst\nand the sill will fall\n\n\nerror: too many arguments were given to this function:"), cons(m->accum, nil())), m);
-		    toss_signal(sig, m);
-		    return 0;
-	       } 
-	       if (fn->next != NULL){
-		    n_frame->next = fn->next;
-		    chain->next = fn;
-		    fn->next = NULL;
-	       } else {
-		    n_frame->next = fn;
-	       }
-
+	      // The APPLY step adds a new frame to the stack (unless
+	      // there's a tail-call), prepares the 'rib' (which will
+	      // become the scope of the new function call), builds the
+	      // argument chain (which is a series of instructions that 
+	      // evaluate the arguments before actually performing the 
+	      // function. 
+	      closure *name = cheap_car(assoc(symbol(FUNCTION_NAME), 
+					      m->accum->in->info));
+	      if (nilp(name)){
+		  closure *sig = build_signal(cons(string(L"\n\n\nI am one of the ten thousand things\nbut I cannot forget that I am also an I\nso I hope and act and dream instead\n\n\nI attempted to treat something as a function, but it wasn't:"), cons(m->accum, nil())), m);
+		  toss_signal(sig, m);
+	      } else {
+		  frame* n_frame;
+		  if ((m->current_frame->next == NULL) && 
+		      (m->current_frame != m->base_frame)){
+		      n_frame = m->current_frame;
+		  } else {
+		      n_frame = new_frame(m->current_frame);
+		  }
+		  n_frame->rib = m->accum->closing;
+		  
+		  operation* fn=new(operation);
+		  fn->type = MACHINE_FLAG;
+		  fn->flag = DO; 
+		  fn->closure = m->accum;
+		  m->current_frame = n_frame;
+		  operation* chain=build_argument_chain(fn_lambda_list(m->accum),
+							instruction->closure,
+							fn);
+		  
+		  if(chain == (operation *)-1){
+		      closure *sig = build_signal(cons(string(L"\n\n\nClouds drift into my window\nbut they don't drift out again\nsoon the frame will burst\nand the sill will fall\n\n\nerror: too many arguments were given to this function:"), cons(name, nil())), m);
+		      toss_signal(sig, m);
+		      return 0;
+		  } 
+		  if (fn->next != NULL){
+		      n_frame->next = fn->next;
+		      chain->next = fn;
+		      fn->next = NULL;
+		  } else {
+		      n_frame->next = fn;
+		  }
+	      }
 
 	  } else if (instruction->flag == ARGUMENT){
 	       // This one pushes the argument onto the rib, once it's been
