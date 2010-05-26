@@ -18,7 +18,7 @@
 	  sym->in->info = nil();					\
 	  val = cons(lambda_list, cons(sym, nil()));			\
 	  val->in->info =						\
-	      cons(cons(symbol(FUNCTION_NAME),				\
+ 	      cons(cons(symbol(FUNCTION_NAME),				\
 		   cons(symbol(string_to_symbol_id(L""#fn_name)),	\
 			nil())), nil());				\
 	  internal_set(symbol(string_to_symbol_id(L""#fn_name)),	\
@@ -182,9 +182,13 @@ void callcc_fn(machine *m)
      ret->in->info = nil();
      ret->in->mach = stack_copy(m);
      // (quote ((a) ret))
-     closure *cont = quote(cons(cons(make_arg(a),  nil()),
-				cons(ret, nil())));
-
+     closure *cont = cons(cons(make_arg(a),  nil()),
+				cons(ret, nil()));
+     cont->in->info = 
+	 cons(cons(symbol(FUNCTION_NAME),		
+		   cons(symbol(string_to_symbol_id(L"continuation")),   
+			nil())), nil());			   
+     cont = cons(cleari(), cons(cont, nil()));
      closure *call = cons(fn, cons(cont, nil()));
 
      operation* newop = new(operation);
@@ -234,8 +238,13 @@ closure * build_signal(closure *a, machine *m)
      // (quote ((a) ret))
      closure *cont = cons(cons(make_arg(a),  nil()),
 			  cons(ret, nil()));
+     cont->in->info = 	 
+	 cons(cons(symbol(FUNCTION_NAME),		
+		   cons(symbol(string_to_symbol_id(L"continuation")),   
+			nil())), nil());			   
+
      cont = cheap_cons(cont, cons(a, nil()));
-     cont = quote(cont);
+     cont = cons(cleari(), cons(cont, nil()));
      return cont;
 }
 

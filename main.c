@@ -8,6 +8,21 @@
 #include "memory.c"
 #include "parsing.c"
 
+void interact_parse(machine *m)
+{
+    FILE *file = stdin;
+    printf("-> ");
+    closure *rep = parse_file(file);
+    while (rep != NULL){
+	m = eval(rep, m);
+	if (m->accum != NULL){
+	    print_closure(m->accum);
+	    printf("\n");
+	    printf("-> ");
+	}
+	rep = parse_file(file);
+    }
+}
 
 int main( int   argc,
           char *argv[] )
@@ -17,51 +32,25 @@ int main( int   argc,
      FILE *file = fopen("floor.8", "r");
      closure *rep = parse_file(file);
      while (rep != NULL){
-	 print_closure(rep);
 	 m = eval(rep, m);
 	 rep = parse_file(file);
-	 printf("\n");
      }
      fclose(file);
      int i;
-     int interact = 0;
-
      if(argc == 1){
-	 file = stdin;
-	 interact = 1;
-	 printf("-> ");
-	 rep = parse_file(file);
-	 while (rep != NULL){
-	     m = eval(rep, m);
-	     if ((interact!=0) && (m->accum != NULL)){
-		 print_closure(m->accum);
-		 printf("\n");
-		 printf("-> ");
+	 interact_parse(m);
+     } else {
+	 for (i=1; i<argc; i++){
+	     if(!strcmp(argv[i], "-i")){
+		 interact_parse(m);
+	     } else {
+		 rep = parse_file(fopen(argv[i], "r"));
+		 while (rep != NULL){
+		     m = eval(rep, m);
+		     rep = parse_file(file);
+		 }
 	     }
-	     rep = parse_file(file);
 	 }
-	 }
-
-
-     /*  for (i=1;i<argc; i++){ */
-     /* 	if (!strcmp(argv[i], "-i")){ */
-     /* 	  yyrestart(stdin); */
-     /* 	  interact = 1; */
-     /* 	  printf("-> "); */
-     /* 	} else { */
-     /* 	  yyrestart(fopen(argv[i], "r")); */
-     /* 	  interact = 0; */
-     /* 	} */
-     /* 	  rep = 0; */
-     /* 	  while (rep != -1){ */
-     /* 	    rep = yyparse(); */
-     /* 	    if ((interact!=0) && (m->accum != NULL)){ */
-     /* 	      print_closure(m->accum); */
-     /* 	      printf("\n"); */
-     /* 	      printf("-> "); */
-     /* 	    } */
-     /* 	  } */
-     /* 	  fclose(yyin);  */
-     /* 	} */
+     }
      return 0; 
 }

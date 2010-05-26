@@ -3,18 +3,23 @@
 (base-signal-handler (set-info (' ((q) (print q))) 
 			       (cons (cons (' function-name) (cons (' stupid-signal-handler) ())) ())))
 
-(set! unlambda (' ((list)
-		 (oif list (oif (is (car list) (' ...)) 
-		    	        (unlambda (cdr list))
-   			        (cons (oif (atom-p (car list)) 
-				           (car list) 
-				           (oif (is (car (car list))
-						    (' '))
-					       (car (cdr (car list)))
-					       (car (car list))))
-				      (unlambda (cdr list)))) ()))))
+(set! unlambda 
+      (' ((list)
+	  (oif list (oif (is (car list) (' ...)) 
+			 (unlambda (cdr list))
+			 (cons (oif (atom-p (car list)) 
+				    (car list) 
+				    (oif (atom-p (car (car list)))
+					 (oif (is (car (car list)) (' '))
+					      (car (cdr (car list)))
+					      (car (car list)))
+					 (oif (is (car (car (car list))) (' '))
+					      (car (cdr (car (car list))))
+					      (signal "Bad lambda list!"))))
+			       
+			       (unlambda (cdr list)))) ()))))
 
-(set-info unlambda (cons (cons (' function-name) (cons (' lambda) ())) ()))
+(set-info unlambda (cons (cons (' function-name) (cons (' unlambda) ())) ()))
 
 (set! leak-all (' ((list closure)
 		 (oif list (leak-all (cdr list) 
@@ -181,6 +186,6 @@ error: I tried to take the rest of something I don't know how to take the rest o
 				"-parse-table")))
 	   (set! (, table-name) (join (list test action) (, table-name)))))
 
-(def parse ((' state) stream (accum ()))
-     )
+(def parse (stream ((' state) null) (accum ())) ())
+	
 

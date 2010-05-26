@@ -385,6 +385,7 @@ void internal_set(closure *sym,
 
 int commap(closure *arg)
 {
+     // returns true if argument == ,x
      if ((arg->in->type == CONS_PAIR) &&
 	 (cheap_car(arg)->in->type == SYMBOL) &&
 	 (cheap_car(arg)->in->symbol_id == COMMA)) return 1;
@@ -399,22 +400,25 @@ int asterixp(closure *arg)
 	 (cheap_car(arg)->in->symbol_id == ASTERIX)) return 1;
      return 0;
 };
+
 int atpendp(closure *arg)
 {
-     // returns true if argument == *x
+     // returns true if argument == @x
      if ((arg->in->type == CONS_PAIR) &&
 	 (cheap_car(arg)->in->type == SYMBOL) &&
 	 (cheap_car(arg)->in->symbol_id == ATPEND)) return 1;
      return 0;
 };
+
 int quotep(closure *sym)
 {
-     // returns true if argument == *x
+     // returns true if argument == 'x
      if ((sym->in->type == CONS_PAIR) &&
 	 (cheap_car(sym)->in->type == SYMBOL) &&
 	 (cheap_car(sym)->in->symbol_id == QUOTE)) return 1;
      return 0;
 };
+
 int elipsisp(closure *sym)
 {
      //returns true if sym == ...
@@ -425,9 +429,11 @@ int elipsisp(closure *sym)
 
 int optional_argp(closure *sym)
 {
+     // returns true if argument == (x a) or ('x a)
      if ((sym->in->type == CONS_PAIR) &&
-	 (cheap_car(sym)->in->type == SYMBOL) &&
-	 (cheap_car(sym)->in->symbol_id != QUOTE))  return 1;
+	 (cheap_car(sym)->in->symbol_id != QUOTE &&
+	 ((cheap_car(sym)->in->type == SYMBOL) || 
+	  quotep(cheap_car(sym))))) return 1;
      return 0;
 };
 
@@ -562,9 +568,8 @@ operation *make_arg(closure *sym, closure *val, operation *current)
      current = arg;
      current->type = CLOSURE_OP;
      current->next = arg2;
-     // it's possible these can be simplified to conses not lists.
      if (quotep(sym)){
-	  if (commap(val)){
+	 if (commap(val)){
 	       //(closure_op (second val))->(machine_op, argument (second sym))
 	       current->closure = second(val);
 	       current = arg2;
@@ -849,6 +854,7 @@ int virtual_machine_step(machine *m)
 	      // function. 
 	      closure *name = cheap_car(assoc(symbol(FUNCTION_NAME), 
 					      m->accum->in->info));
+	      //print_closure(name);
 	      if (nilp(name)){
 		  closure *sig = build_signal(cons(string(L"\n\n\nI am one of the ten thousand things\nbut I cannot forget that I am also an I\nso I hope and act and dream instead\n\n\nI attempted to treat something as a function, but it wasn't:"), cons(m->accum, nil())), m);
 		  toss_signal(sig, m);
