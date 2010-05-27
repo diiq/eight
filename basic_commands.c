@@ -421,6 +421,24 @@ void symbol_to_string_fn(machine *m){
     m->accum = string(symbol_id_to_string(sym->in->symbol_id));
 }
 
+void string_to_number_fn(machine *m){
+    closure* str = get_arg(string, m);
+    wchar_t *mstr = string_to_c_MALLOC(str);
+    char *rstr = calloc(wcslen(mstr), sizeof(char));
+    wcstombs(rstr, mstr, wcslen(mstr));
+
+    m->accum = number(atoi(rstr));
+    free(mstr);
+}
+
+void character_p_fn(machine *m){
+    closure *achar = get_arg(character, m);
+    if(achar->in->type == CHARACTER){
+	m->accum = achar;
+    } else {
+	m->accum = nil();
+    }
+}
 //------------------------------- FFI --------------------------------//
 
 
@@ -565,6 +583,12 @@ void new_basic_commands(machine *m)
      intern_fn(string-to-symbol, &string_to_symbol_fn, cons(make_arg(string), nil()), m);
 
      intern_fn(symbol-to-string, &symbol_to_string_fn, cons(make_arg(sym), nil()), m);
+
+     intern_fn(string-to-number, &string_to_number_fn, cons(make_arg(string), nil()), m);
+
+     intern_fn(character-p, &character_p_fn, cons(make_arg(character), nil()), m);
+
+
 }    
 
 #endif

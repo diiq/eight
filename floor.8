@@ -1,8 +1,19 @@
+# Doing this because making C hear a comma as an identifier is ugly.
+# WARNING this is a kludge and will need to be fixed.
 (set! , comma)
 
+# Temporary signal handler.
 (base-signal-handler (set-info (' ((q) (print q))) 
 			       (cons (cons (' function-name) (cons (' stupid-signal-handler) ())) ())))
 
+# unlambda, leak-all, and fn exist because of the fiddly nature of
+# closures in eight. If a symbol that is used in the lambda-list has
+# already been bound, that closure ends up being a more immediate
+# environment than the function-call itself, and that argument's value
+# will be ignored in favor of the closed value. It avoid this, we must
+# leak all the symbols in the lambda list. Before that can be done,
+# ..., ', and optional arguments must be stripped. Unlambda does the
+# stripping.
 (set! unlambda 
       (' ((list)
 	  (oif list (oif (is (car list) (' ...)) 
@@ -19,14 +30,22 @@
 			       
 			       (unlambda (cdr list)))) ()))))
 
+# In order to avoid unsightly errors, all functions are given a
+# function-name. Without this, debugging is a pain, and with it, the
+# interpreter can verify that what it is applying is a function. Until
+# fn is written, the function-name must be added by hand.
 (set-info unlambda (cons (cons (' function-name) (cons (' unlambda) ())) ()))
 
+# Leak-all leaks a list of symbol from a closure. 'Leaking' just means
+# removing that symbol from the closing (more or less permanently).
 (set! leak-all (' ((list closure)
 		 (oif list (leak-all (cdr list) 
 				     (leak (car list) closure)) closure))))
 
 (set-info leak-all (cons (cons (' function-name) (cons (' leak-all) ())) ()))
 
+# Yay! It's fn, Eight's version of lambda. Note that the function-name
+# is built in.
 (set! fn (' (((' lambda-list) ... (' code))
 	     (set-info (cons lambda-list 
 			     (leak-all (unlambda lambda-list) code))
@@ -34,35 +53,84 @@
 
 (set-info fn (cons (cons (' function-name) (cons (' fn) ())) ()))
 
+(set! string-p (fn (string) (oif string
+				 (oif (character-p (car string)) 
+				      (string-p (cdr string))
+				      ())
+				 (' t))))
+
+(set-info string-p (cons (cons (' function-name) (cons (' string-p) ())) ()))
+
+# Aaand def. Where fn defines anonymous functions, def binds a
+# function to a name. TODO this should include an optional help string.
 
 (set! def (fn ((' name) (' lambda-list) ... (' code))
               (set! (, name) 
-		    (set-info (fn (, lambda-list) (* code)) 	
+		    (set-info (fn (, lambda-list) (* (oif (string-p (car code))
+							  (cdr code) code)))	
 		      (cons (cons (' function-name) 
-					  (cons name ())) ())))))
+					  (cons name ()))	      
+			    (oif (string-p (car code))
+				 (cons (cons (' help) 
+					     (cons (car code) ())) ())
+				 ()))))))
 
 (set-info def (cons (cons (' function-name) (cons (' def) ())) ()))
 
-(def no (x) (is x ()))
+# There! That's it for the nitty-gritty. Now it's a matter of writing
+# enough of a language to build an elegant parser out of. The parser
+# built in C does not parse numbers, or special symbols like ' * @ and
+# ,. I suppose it could, but I'd rather build something that can make
+# read-macros look sissy.
 
-(def cons-p (x) (no (atom-p x)))
+# There! Now we're in condition to make a real base-signal-handler.
+# Signals are of the form (continuation data), and data is usually of
+# the form ("poem" other-stuff). It's OK if you use a different format
+# for the data. I like it this way though.
 
 (base-signal-handler (fn (q) 
 			 (oif (cons-p (car (cdr q))) 
-			     ((fn () 
-				  (print (car (car (cdr q))))
-				  (print (car (cdr (car (cdr q)))))))
-			   (print "Untraditionally-formed signal. 
-Try using a poem, next time."))
+			      ((fn () 
+				   (print (car (car (cdr q))))
+				   (print (car (cdr (car (cdr q)))))))
+			      (fn () (print "
+
+
+Water does not know
+the wrong way
+water does not know
+
+
+I received a signal in an unconventional format. Try using the form (poem-message data):")
+			      (print q)))
 			 ()))
 
 
+(def no (x) 
+     "Returns t if x is (). Returns () otherwise."
+     (is x ()))
+
+(def cons-p (x) 
+     "Returns a true-value if x is a cons-pair, and () otherwise."
+     (no (atom-p x)))
+
+(def or (arg ... (' args))
+     "Performs logical or. Returns () if and only if all arguments evaluate to (). Or evaluates arguments in order, and stops when it reaches a non-() value. 
+
+Or is particularly beautiful in Eight."
+  (oif args
+      (oif arg arg (or (* args)))
+      arg))
+
 (def copylist (xs)
+     "Element-wise copies a list. This is useful because Eight passes arguments by reference; changing part of a list can have unintended consequences if some sub-lists are also used elsewhere. Copylist can help protect against that, when such mangling is not in your favor." 
   (oif (no xs)
       ()
       (cons (car xs) (copylist (cdr xs)))))
 
-(def list (... args) (copylist args))
+(def list (... args) 
+     "List creates a list of its arguments in order."
+     (copylist args))
 
 (def assoc (key al)
   (oif (no al)
@@ -76,20 +144,43 @@ Try using a poem, next time."))
        (cons (f (car xs)) 
 	     (map1 f (cdr xs)))))
 
-
+# These tests will be useful for state-transitions in the
+# parser. We're getting to it, I promise!
 
 (def newline-p (char) (is char $
-))
+)) # Note that the $ is followed by a newline!
+# $ marks a literal character.
 
 (def open-paren-p (char) (is char $( ))
 
 (def close-paren-p (char) (is char $) ))
 
-(def doublequote-p (char) (is char $" )) $"
+(def doublequote-p (char) (is char $" )) #"<- unconfuses editors.
 
 (def character-marker-p (char) (is char $$ ))
 
+(def comment-character-p (char) (is char $# ))
+
 (def backslash-p (char) (is char $\ ))
+
+(def digit-p (char) (or (is char $0)
+			(is char $1)
+			(is char $2)
+			(is char $3)
+			(is char $4)
+			(is char $5)
+			(is char $6)
+			(is char $7)
+			(is char $8)
+			(is char $9)))
+
+# First and rest are high-level versions of car and cdr.  One of the
+# benefits of using first and rest is that they are modifiable. Here,
+# I'll make them treat file-streams like strings, making the parser
+# able to parse from a file or a string with no extra work!  One
+# possible optimization for Eight is to include a real table, instead
+# of using assoc tables like this. It will be easy enough to swap out
+# backends for first and rest if and when it's necessary.
 
 (set! first-table ())
 (set! rest-table ())
@@ -99,6 +190,10 @@ Try using a poem, next time."))
 
 (def add-rest-function (test function)
      (set! rest-table (cons (list test function) rest-table)))
+
+# It probably makes sense to generalize this process of building a
+# function out of a table of cases and actions. It will be used again
+# in the parser and elsewhere.
 
 (def first (xs)
      (inner-first xs first-table))
@@ -155,9 +250,11 @@ error: I tried to take the rest of something I don't know how to take the rest o
 	
 (set! join cons)
 
+# Grand. From here on out, it should be first/rest/join not car/cdr/cons
+
 (def append (xs ys ... (' yss))
   (oif xs
-      (cons (car xs) (append (cdr xs) ys (* yss)))
+      (join (first xs) (append (rest xs) ys (* yss)))
       (oif yss
 	   (append ys (* yss))
 	   ys)))
@@ -170,10 +267,19 @@ error: I tried to take the rest of something I don't know how to take the rest o
 	       (join (f (first xs) (first (rest xs)))
 		     (pair (rest (rest xs)) f)))))
 
+# With is like the CL let. It uses an anomnymous function to
+# temporarily bind variables. It uses fewer parentheses, though.
+
 (def with ((' parms) ... (' body))
      ((fn (, (map1 first (pair parms)))
 	  (* body))
       (* (map1 (fn (x) (first (rest x))) (pair parms)))))
+
+
+(def reverse (xs)
+     (oif (no (rest xs))
+	  xs
+	  (append (reverse (rest xs)) (list (first xs)))))
 
 (def add-parse-state ((' name))
  	   (set! (, (string-to-symbol 
@@ -186,6 +292,148 @@ error: I tried to take the rest of something I don't know how to take the rest o
 				"-parse-table")))
 	   (set! (, table-name) (join (list test action) (, table-name)))))
 
-(def parse (stream ((' state) null) (accum ())) ())
-	
+(def parse-inner (stream state accum table)
+     (oif ((first (first table)) stream)
+	  ((first (rest (first table))) stream accum)
+	  (parse-inner stream state accum (rest table))))
 
+(def parse (stream ((' state) null) (accum ())) ()
+     (print state)
+     (parse-inner stream state accum 
+			    (, (string-to-symbol 
+				(append (symbol-to-string state) 
+					"-parse-table")))))
+
+	
+(def parse-file-end (stream)
+     (or (eof-p (first stream))
+	 (no stream)))
+
+(add-parse-state null)
+
+(add-parse-action null
+		  (fn (stream) (' t))
+		  (fn (stream accum) (parse stream symbol ())))
+
+(add-parse-action null
+		  parse-file-end
+		  (fn (stream accum) (list () ())))
+
+(add-parse-action null
+		  (fn (stream) (whitespace-p (first stream)))
+		  (fn (stream accum) (parse (rest stream) null ())))
+
+(add-parse-action null
+		  (fn (stream) (comment-character-p (first stream)))
+		  (fn (stream accum) (parse (rest stream) comment ())))
+
+(add-parse-action null
+		  (fn (stream) (digit-p (first stream)))
+		  (fn (stream accum) (parse stream number ())))
+
+(add-parse-action null
+		  (fn (stream) (open-paren-p (first stream)))
+		  (fn (stream accum) (parse (rest stream) list ())))
+
+(add-parse-state comment)
+
+(add-parse-action comment
+		  (fn (stream) (' t))
+		  (fn (stream accum) (parse (rest stream) comment ())))
+
+(add-parse-action comment
+		  parse-file-end
+		  (fn (stream accum) (list () stream)))
+
+(add-parse-action comment
+		  (fn (stream) (newline-p (first stream)))
+		  (fn (stream accum) (list () (rest stream))))
+
+
+(add-parse-state symbol)
+(add-parse-action symbol
+		  (fn (stream) (' t))
+		  (fn (stream accum) (parse (rest stream) 
+					    symbol 
+					    (join (first stream) accum))))
+
+(add-parse-action symbol
+		  (fn (stream) (or (parse-file-end stream)
+				   (whitespace-p (first stream))))
+		  (fn (stream accum) (list 
+				      (string-to-symbol (reverse accum))
+				      (rest stream))))
+
+
+(add-parse-state number)
+(add-parse-action number
+		  (fn (stream) (' t))
+		  (fn (stream accum) (parse stream symbol accum)))
+
+(add-parse-action number
+		  (fn (stream) (digit-p (first stream)))
+		  (fn (stream accum) (parse (rest stream) 
+					    number 
+					    (join (first stream accum)))))
+
+(add-parse-action number
+		  (fn (stream) (or (whitespace-p (first stream))
+				   (eof-p (first stream))))
+		  (fn (stream accum) (list (string-to-number (reverse accum))
+					   (rest stream))))
+
+(add-parse-action number
+		  (fn (stream) (digit-p (first stream)))
+		  (fn (stream accum) (parse (rest stream) 
+					    number 
+					    (join (first stream) accum))))
+
+
+
+
+
+(add-parse-state list)
+
+(add-parse-action list
+		  (fn (stream) (' t))
+		  (fn (stream accum) (with (ret (parse stream symbol ()))
+					(parse (first (rest ret))
+					       list
+					       (join (first ret) accum)))))
+
+(add-parse-action list
+		  parse-file-end
+		  (fn (stream accum) (list (reverse accum) ())))
+
+(add-parse-action list
+		  (fn (stream) (whitespace-p (first stream)))
+		  (fn (stream accum) (parse (rest stream) list accum)))
+
+(add-parse-action list
+		  (fn (stream) (comment-character-p (first stream)))
+		  (fn (stream accum) (parse (first (rest 
+						    (parse (rest stream) 
+							   comment 
+							   ())))
+					    list
+					    accum)))
+
+(add-parse-action list
+		  (fn (stream) (digit-p (first stream)))
+		  (fn (stream accum) (with (ret (parse stream number ()))
+					   (parse (first (rest ret))
+						  list
+						  (join (first ret) accum)))))
+						 
+
+(add-parse-action list
+		  (fn (stream) (open-paren-p (first stream)))
+		  (fn (stream accum) (with (ret (parse (rest stream) list ()))
+					   (parse (first (rest ret))
+						  list
+						  (join (first ret) accum)))))
+						 
+(add-parse-action list
+		  (fn (stream) (close-paren-p (rest stream)))
+		  (fn (stream accum) (list (reverse accum) (rest stream))))
+		     
