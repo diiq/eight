@@ -9,17 +9,165 @@
 
 
 
-Document last modified: 5/15/2010                                      
+Document last modified: 5/30/2010                                      
 Eight 2010, a lisp by Sam Bleckley
-
-Eight is a programming language intended to make metaprogramming
-easier. It is based on lisp, but with significant changes under the
-hood. Eight is currently pre-alpha, so please expect nothing and be
-surprised when you get something.
 
 Contact me!
 Sam Bleckley
 http://diiq.org/
 stm31415@gmail.com
 405-550-3487
+
+
+Eight is a language designed to be beautiful and emotional and
+extraordinarily powerful. It is not designed to be fast-running or
+easy to learn. I have no interest in easy programs. Interesting
+programs do difficult things. Eight aims to do all the easy things for
+you, so you can concentrate on the fiendish and the impossible.
+
+
+
+    Gnawing on bones
+    My tongue is sore from trying to get the marrow out
+    I refuse to ignore the meat any longer
+
+
+
+Eight is a intended to make metaprogramming easier. It is based on
+lisp, but with significant changes under the hood. Eight is currently
+pre-alpha, so please expect nothing and be surprised when you get
+something.
+
+To use Eight, open a terminal and run:
+
+make
+./eight
+
+
+
+To see example functions in Eight, look through floor.8. I'd skip the
+first 6 or 7 functions --- they're tricksy --- but the rest of the
+file is good fodder for learning. You can also use the help function
+in the interpreter; for instance:
+
+-> (help rest)
+
+
+
+
+
+
+WARNING: If you're just interested in playing around with Eight, I'd
+reccomend NOT reading the rest of this document. If you want to hack
+at the source, I'd HIGHLY reccomend reading the rest of this document.
+
+
+
+--------------------------- HOW IT WORKS --------------------------
+
+
+Eight is based on the 'closure algebra', which I made up. (So no
+wikipedia page. Sorry.) The closure algebra is a re-imagining of the
+ancient lisp functions cons, car, cdr, and quote.
+
+In order to understand these changes, it's important to understand
+what a functional closure is. Check out
+http://en.wikipedia.org/wiki/Closure_(computer_science) and SICP.
+
+Eight stretches the idea of closures a little bit --- instead of being
+around functions, eight can close over any structure of symbols.
+
+Instead of returning its argument unevaluated (like it does in
+McCarthy's lisp), quote in Eight (') returns a closure over it's
+unevaluated argument. Because this happens invisibly, it is somewhat
+hard to demonstrate. Here's a first attempt:
+
+    ->(set! a ((fn (func) (' (func $A $B $C))) list))
+    (func $A $B $C)
+
+So, that line makes a function. The function takes another function as
+an argument. The anonymous function is called with list as it's
+argument. It returns the quoted list (func $A $B $C), and binds the
+symbol a to it. Because that list was made with ', it is a closure!
+
+    ->(closing-of a)
+    ((func ((... args) (copylist args))))
+
+Calling closing-of returns the closing of an Eight object as an assoc
+list (a list of symbol/value pairs). ((... args) (copylist args)) is the
+signature of the list function. So that means that func is still bound
+to the list function --- but only inside (func $A $B $C). Just
+evaluateing func:
+
+    ->func
+
+Will throw an unbound-symbol error. But evaluating a (Eight uses , for
+eval):
+
+    -> (, a)
+    "ABC"
+
+$A is the character 'A' --- and a list of characters is a string. So
+calling (list $A $B $C) returns "ABC"; because func is bound to list,
+that's what we get! Hooray!
+
+Once quote is altered in this way, cons, car, and cdr must be changed,
+too. For instance:
+
+    ->(closing-of (car a))
+    ((func ((... args) (copylist args))))
+
+but 
+
+    ->(closing-of (cdr a))
+    ()
+
+Because the car of a is the symbol func, it must retain the
+environment it was made in. But the cdr of a is ($A $B $C) --- which
+contains no symbols that have been closed-over, and so the closure is
+unnecessary.
+
+For a flawed discussion of how this works, see
+http://wiki.github.com/diiq/eight/the-closure-algebra
+
+
+
+-------------------------- THE INTERNALS -------------------------
+
+There are 11 files of particular interest:
+
+eight.h is the header file, and contains struct, type, and function
+declarations, along with any global variables. 
+ 
+main.c declares the main() function, which initializes the machine and
+starts the interpretation of code.
+
+floor.8 contains the Eight source necessary to write a full parser in Eight. 
+
+eight.c contains the giant virtual_machine_step function, that does
+the actual work of interpreting Eight code. It also contains all the
+associated support functions.
+
+basic_commands.c defines and initializes the basic built-in functions
+of Eight: car, cons, cdr, read-file, and so on.
+
+memory.c holds the definition of the garbage collector.
+
+parsing.c is a very bare-bones parser, designed to parse ONLY floor.8. 
+
+strings.c contains the internal functions for string manipulation.
+
+print.c contains the internal output functions.
+
+symbols.c contains the symbol-table and associated
+symbol-transformation functions.
+
+test.8 contains a list of functions that verify the proper working of
+the Eight machine. It's a good idea to run these after altering
+virtual_machine_step, car, cdr, or cons.
+
+
+
+
+
 
