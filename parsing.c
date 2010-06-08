@@ -1,3 +1,16 @@
+/***************************************************************************
+                                 .ooooo.          
+                                d88'   `8. 
+                                Y88..  .8' 
+                                 `88888b.  
+                                .8'  ``88b 
+                                `8.   .88P 
+                                 `boood8'  
+                                      
+ EightLisp, by Sam Bleckley (diiq, stm31415@gmail.com)
+
+***************************************************************************/
+
 /*
 This is intended to be very simple, because it is only there to parse
 unlambda, fn, def, and the full parser. No numbers or error-checking

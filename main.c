@@ -1,5 +1,21 @@
-#include "stdio.h"
+/***************************************************************************
+                                 .ooooo.          
+                                d88'   `8. 
+                                Y88..  .8' 
+                                 `88888b.  
+                                .8'  ``88b 
+                                `8.   .88P 
+                                 `boood8'  
+                                      
+ EightLisp, by Sam Bleckley (diiq, stm31415@gmail.com)
+
+***************************************************************************/
+
+#include <stdio.h>
+#include <locale.h>
+
 #include "eight.h"
+#include "closures.c"
 #include "eight.c"
 #include "print.c"
 #include "basic_commands.c"
@@ -27,6 +43,7 @@ void interact_parse(machine *m)
 int main( int   argc,
           char *argv[] )
 {
+    setlocale (LC_ALL, "");
      initialize_symbol_table();
      machine *m = init_8VM();
      FILE *file = fopen("floor.8", "r");

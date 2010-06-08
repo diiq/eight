@@ -1,3 +1,16 @@
+/***************************************************************************
+                                 .ooooo.          
+                                d88'   `8. 
+                                Y88..  .8' 
+                                 `88888b.  
+                                .8'  ``88b 
+                                `8.   .88P 
+                                 `boood8'  
+                                      
+ EightLisp, by Sam Bleckley (diiq, stm31415@gmail.com)
+
+***************************************************************************/
+
 #ifndef EIGHT_SYMBOLS_
 #define EIGHT_SYMBOLS_
 
@@ -21,6 +34,7 @@ void initialize_symbol_table()
      symbol_table_root->name = NULL;
 }
 
+
 void insert_symbol(wchar_t *name, int val)
 {
     wchar_t *nname = (wchar_t *)malloc(sizeof(wchar_t)*(wcslen(name)+1));
@@ -35,18 +49,6 @@ void insert_symbol(wchar_t *name, int val)
 }
 
 
-symbol_id string_to_symbol_id(wchar_t *name)
-{
-     symbol_id ret = recursive_string_to_symbol_id(name, 
-						   symbol_table_root->next);    
-     if (ret != -1) {
-	  return ret;
-     } else {
-	  symbol_id id = current++;
-	  insert_symbol(name, id);
-	  return id;
-     }
-}
 
 symbol_id recursive_string_to_symbol_id(wchar_t* name, element *root)
 {
@@ -57,6 +59,19 @@ symbol_id recursive_string_to_symbol_id(wchar_t* name, element *root)
 	  return -1;
      } else {
 	  return recursive_string_to_symbol_id(name, root->next);
+     }
+}
+
+symbol_id string_to_symbol_id(wchar_t *name)
+{
+     symbol_id ret = recursive_string_to_symbol_id(name, 
+						   symbol_table_root->next);    
+     if (ret != -1) {
+	  return ret;
+     } else {
+	  symbol_id id = current++;
+	  insert_symbol(name, id);
+	  return id;
      }
 }
 

@@ -17,39 +17,187 @@
 #include "eight.h"
 
 #define BLOCK_SIZE 1048576
- 
+
+//----------------------------- STRUCTURES ----------------------------//
+
+/* A memory block is a big block of memory. Astonishing, right? Memory
+blocks form a linked list; block->this is the actual address of the
+first object stored in the block. block->next is the next block in the
+list. Memory blocks are BLOCK_SIZE bytes. */ 
+
+typedef struct memory_block_struct memory_block;
+
+struct memory_block_struct {
+     void *this;
+     memory_block *next;
+};
+
+
+
+/* A memory location is a pairing of a memory block and an integer
+offset into that block. Adding block->this and offset will point to
+the object at this memory location. */
+
+typedef struct {
+     memory_block *block;
+     int offset;
+} memory_location;
+
+
+
+/* A memory reference is a ghost object; it only exists during garbage
+collection, when it is used to keep track of the new location of an
+object. BEWARE that you do not make the size of this struct larger
+than any struct that might be stored in garbage-collected memory!
+References MUST be the smallest structure in memory (or tied for that
+honor). */
+
+typedef struct {
+     obj_type type;
+     void *point;
+     int size;
+} memory_reference;
+
+
+
+/* A memory must contain the first block in a linked list of memory
+blocks, the 'current' memory location (the location that is being
+written to), the 'from' memory location (the location that is being
+read from), and the size (for keeping track of when next to collect
+the garbage.  */
+
+typedef struct {
+     memory_block *first;
+     memory_location *current;
+     memory_location *from;
+     int size; // this is in units of BLOCK_SIZE
+} memory;
+
+
+//----------------------------- GLOBALS ----------------------------//
+
+// memory_a is the working memory
 memory *memory_a;
+
+// memory_b is where we copy to, when we garbage collect
 memory *memory_b;
+
+// garbage_check is a threshold; when memory->a > garbage_check
+// then collection should happen.
 int garbage_check = 1;
+
+// the_nil is a constant reverence to () (there is only one nil)
 closure *the_nil;
+
+//--------------------------- SIGNATURES --------------------------//
+
+machine *collect();
+
+void *allocatery(memory *mo, int size);
+
+void *repair_reference(void *ref);
+
+void collectify();
+
+memory *make_memory();
+
+void copy_memory(int start, int end);
+
+void free_memory(memory *a);
+
+int mysizeof(void *typed);
+
+void print_type(obj_type type);
+
+void print_heap(memory *m);
+
+void test_memory();
+
+//--------------------------- FUNCTIONS --------------------------//
+
+
+machine * collect()
+{
+    // Collect returns a pointer to a machine structure.
+
+    // If it's not time to collect yet (the size of memory is
+    // less than the garbage_check), then just return the
+    // same machine, uncollected.
+    if (memory_a->size < garbage_check){
+	return memory_a->first->this;
+    }
+    
+    // memory_b is the temporary location to which we'll copy
+    // the stuff we want to keep.
+    memory_b = make_memory();
+    
+    // Here we'll copy the machine and nil over to the new
+    // memory --- they are the root of the memory tree.
+    repair_reference(memory_a->first->this);
+    the_nil = repair_reference(the_nil);
+    
+    collectify();
+    
+    free_memory(memory_a);
+    memory_a = memory_b;
+
+    // Don't collect again until the memory doubles in size.
+    // TODO: upper bound is exp. memory growth. This will eventually
+    // fail.
+    garbage_check = memory_a->size * 2;
+    
+    return memory_a->first->this;
+}
+
+
+memory *make_memory()
+{ 
+    // Returns an initialized memory structure. 
+
+    memory *amemory;
+    amemory = malloc(sizeof(memory));
+
+    // Initialize the 'first' block
+    amemory->first = calloc(1, sizeof(memory_block));
+    amemory->first->this = calloc(1, BLOCK_SIZE);
+    amemory->first->next = NULL;
+    
+    // Initialize the 'current' location
+    amemory->current = malloc(sizeof(memory_location));
+    amemory->current->block = amemory->first;
+    amemory->current->offset = 0;
+    
+    // Initialize the 'from' location
+    amemory->from = malloc(sizeof(memory_location));
+    amemory->from->block = amemory->first;
+    amemory->from->offset = 0;
+
+    // Initialize the size
+    amemory->size = 1;
+
+    return amemory;
+}
+
 
 machine * init_memory()
 {
-     // Initialize memory with the root object, a machine,
-     // and return the machine.
-     memory_a = malloc(sizeof(memory));
-     memory_a->first = calloc(1, sizeof(memory_block));
-     memory_a->first->this = calloc(1, BLOCK_SIZE);
-     memory_a->first->next = NULL;
+    // Initialize memory with the root object, a machine.
+    // Make the nil.  
+    // Return the machine.
 
-     memory_a->current = malloc(sizeof(memory_location));
-     memory_a->current->block = memory_a->first;
-     memory_a->current->offset = 0;
-     memory_a->size = 1;
+    memory_a = make_memory();
+    machine *memory_root = allocate(sizeof(machine));
+    memory_root->type = MACHINE;
 
-     memory_a->from = malloc(sizeof(memory_location));
+    // Make the () closure
+    the_nil = allocate(sizeof(closure));
+    the_nil->in = allocate(sizeof(doubleref));
+    the_nil->type = DREF;
+    the_nil->in->type = NIL;
+    the_nil->in->info = the_nil;
+    the_nil->closing = the_nil;
 
-     machine *memory_root = allocate(sizeof(machine));
-     memory_root->type = MACHINE;
-     the_nil = allocate(sizeof(closure));
-     the_nil->in = allocate(sizeof(doubleref));
-     the_nil->type = DREF;
-     the_nil->in->type = NIL;
-     the_nil->in->info = the_nil;
-     the_nil->closing = the_nil;
-
-
-     return memory_root;
+    return memory_root;
 }
 
 closure *nil()
@@ -72,9 +220,6 @@ void next_reference(memory *mem)
     // This function points the from_location to the next object
     // in memory, allowing iteration over all objects.
 
-     //    printf("read from %d to %d\n", 
-//	    m->from->offset, 
-//	    mysizeof(from_location(m))+m->from->offset);
      if (mem->from->offset == -1) // this means we're at the end of the heap
 	  return;
 
@@ -84,11 +229,10 @@ void next_reference(memory *mem)
 	mem->from->offset >= BLOCK_SIZE-1){ 
 	  // there's nothing left 
 	  // in this block...
-	  // printf("doin this now\n");
 	  if (mem->from->block->next != NULL){
 	       // if there's another block,
 	       if(!mem->from->block->next->this){
-		    printf("You are a bastard.\n");
+		   error();
 	       }
 	       mem->from->block = mem->from->block->next;
 	       mem->from->offset = 0;
@@ -194,44 +338,6 @@ void free_memory(memory *a)
 }
 
 
-
-machine * collect()
-{
-
-     if (memory_a->size < garbage_check){
-	  return memory_a->first->this;
-     }
-     // printf("collectin', 'cause size is %d and check is %d.\n",
-     //	memory_a->size,
-     // garbage_check);
-     //print_heap(memory_a);
-     memory_b = malloc(sizeof(memory));
-     memory_b->first = malloc(sizeof(memory_block));
-     memory_b->first->this = calloc(1, BLOCK_SIZE);
-     memory_b->first->next = NULL;
-     memory_b->current = malloc(sizeof(memory_location));
-     memory_b->current->block = memory_b->first;     
-     memory_b->current->offset = 0;
-     memory_b->from = malloc(sizeof(memory_location));
-     memory_b->from->block = memory_b->first;
-     memory_b->from->offset = 0;
-
-     memory_b->size = 1;
-
-     // copy machine
-     repair_reference(memory_a->first->this);
-     the_nil = repair_reference(the_nil);
-     // collectify
-     collectify();
-          
-     // free old memory
-     free_memory(memory_a);
-     memory_a = memory_b;
-     // return new machine
-     //     print_heap(memory_a);
-     garbage_check = memory_a->size * 2;
-     return memory_a->first->this;
-}
 
 void collectify()
 {

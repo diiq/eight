@@ -1,3 +1,16 @@
+/***************************************************************************
+                                 .ooooo.          
+                                d88'   `8. 
+                                Y88..  .8' 
+                                 `88888b.  
+                                .8'  ``88b 
+                                `8.   .88P 
+                                 `boood8'  
+                                      
+ EightLisp, by Sam Bleckley (diiq, stm31415@gmail.com)
+
+***************************************************************************/
+
 #ifndef COMMANDS_
 #define COMMANDS_
 
@@ -9,22 +22,21 @@
 				      m->current_frame))     		
 
 #define intern_fn(fn_name, fn_pointer, lambda_list, m)	do {		\
-          sym = new(closure);						\
-	  sym->in = new(doubleref);					\
-	  sym->in->type = BUILTIN;     					\
-	  sym->type = DREF;						\
-	  sym->in->builtin_fn = fn_pointer;				\
-	  sym->closing = nil();						\
-	  sym->in->info = nil();					\
-	  val = cons(lambda_list, cons(sym, nil()));			\
-	  val->in->info =						\
- 	      cons(cons(symbol(FUNCTION_NAME),				\
-		   cons(symbol(string_to_symbol_id(L""#fn_name)),	\
-			nil())), nil());				\
-	  internal_set(symbol(string_to_symbol_id(L""#fn_name)),	\
-		       val,						\
-		       m->current_frame,                                \
-                       m->base_frame);                                  \
+    sym = new(closure);							\
+    sym->in = new(doubleref);						\
+    sym->in->type = BUILTIN;     					\
+    sym->type = DREF;							\
+    sym->in->builtin_fn = fn_pointer;					\
+    sym->closing = nil();						\
+    sym->in->info = nil();						\
+    val = list(2, lambda_list, sym);					\
+    val->in->info =							\
+      list(1, list(2, symbol(FUNCTION_NAME),				\
+		   symbol(string_to_symbol_id(L""#fn_name))));		\
+    internal_set(symbol(string_to_symbol_id(L""#fn_name)),		\
+		 val,							\
+		 m->current_frame,					\
+		 m->base_frame);					\
   } while (0)
 
 
@@ -495,17 +507,15 @@ void new_basic_commands(machine *m)
      closure *sym;
      closure *val;
 
-     intern_fn(is, &is_fn, cons(make_arg(a), cons(make_arg(b), nil())), m);
+     intern_fn(is, &is_fn, list(2, make_arg(a), make_arg(b)), m);
   
-     intern_fn(set!, &set_fn, cons(quote(make_arg(a)), 
-				   cons(make_arg(b), nil())), m);
-     intern_fn(oif, &oif_fn, cons(
-		    make_arg(test), //arg
-		    cons( //cons
-			 quote(make_arg(then)),//arg
-			 cons( //<--cons                  vv arg vv
-			      quote(make_arg(elser)), 
-			      nil()))), m); // nil
+     intern_fn(set!, &set_fn, list(2, 
+				   quote(make_arg(a)), 
+				   make_arg(b)), m);
+     intern_fn(oif, &oif_fn, list(3, 
+				  make_arg(test),
+				  quote(make_arg(then)),//arg
+				  quote(make_arg(elser))), m); // nil
 
      intern_fn(cons, &cons_fn, cons(make_arg(car), 
 				cons(make_arg(cdr), nil())), m);
