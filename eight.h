@@ -316,5 +316,6 @@ void string_to_symbol_fn(machine *m);
 void symbol_to_string_fn(machine *m);
 void string_to_number_fn(machine *m);
 
-void new_basic_commands(machine *m);
+void intern_builtin_functions(machine *m);
+
 #endif

@@ -16,6 +16,11 @@
 
 #include "eight.h"
 
+
+// These are some clever macros to make interning function slightly less
+// painful. Any time we have to express lisp in c, it's going to be 
+// unpleasant. These make it readable, at least.
+
 #define make_arg(sym) symbol(string_to_symbol_id(L""#sym))
 
 #define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(L""#sym)), \
@@ -38,6 +43,163 @@
 		 m->current_frame,					\
 		 m->base_frame);					\
   } while (0)
+
+#define start_interning_fns()  closure *sym; closure *val;
+
+
+
+
+
+void intern_builtin_functions(machine *m)
+{	  
+    // This function nterns all of the builtin functions: oif, is, +, &c.
+ 
+    // TODO This is still more complicated than it should be.
+
+    start_interning_fns();
+
+    intern_fn(is, &is_fn, 
+	      list(2, make_arg(a), make_arg(b)), m);
+    
+    intern_fn(oif, &oif_fn, 
+	      list(3, 
+		   make_arg(test),
+		   quote(make_arg(then)),
+		   quote(make_arg(elser))), 
+	      m); 
+    
+    intern_fn(cons, &cons_fn, 
+	      list(2, make_arg(car), make_arg(cdr)), 
+	       m);
+    
+    intern_fn(car, &car_fn, list(1, make_arg(cons)), m);
+    
+    intern_fn(cdr, &cdr_fn, list(1, make_arg(cons)), m);
+    
+    intern_fn(comma, &comma_fn, list(1, make_arg(closure)), m);
+    
+    intern_fn(call/cc, &callcc_fn, 
+	      list(1, quote(make_arg(fn))), 
+	      m);
+    
+    
+    
+    
+    intern_fn(atom-p, &atomp_fn, list(1, make_arg(a)), m);
+    
+    intern_fn(leak, &leak_fn, 
+	      list(2, make_arg(sym), make_arg(closure)), 
+	      m);
+    
+    
+    
+    
+
+    intern_fn(set!, &set_fn, 
+	      list(2, quote(make_arg(a)), make_arg(b)), 
+	      m);
+    
+    intern_fn(set-car, &set_car_fn, 
+	      list(2, make_arg(cons), make_arg(value)), 
+	      m);
+    
+    intern_fn(set-cdr, &set_cdr_fn, 
+	      list(2, make_arg(cons), make_arg(value)), 
+	      m);
+    
+    
+    
+    
+    
+    intern_fn(signal, &signal_fn, list(1, make_arg(sig)), m);
+     
+    intern_fn(handle-signals, &add_handler, 
+	      list(2,
+		   quote(make_arg(handler)),  
+		   quote(make_arg(body))), 
+	      m);
+     
+    intern_fn(unhandle-signal, &unhandle_signal, 
+	      list(1, make_arg(sig)), 
+	      m);
+     
+    intern_fn(base-signal-handler, &base_handler, 
+	      list(1, quote(make_arg(handler))), 
+	      m);
+
+
+
+
+
+    intern_fn(closing-of, &closing_of_fn, list(1, make_arg(a)), m);
+
+    intern_fn(set-info, &set_info_fn, 
+	      list(2, make_arg(a), make_arg(info)), 
+	      m);
+
+    intern_fn(get-info, &get_info_fn, list(1, make_arg(a)), m);
+
+
+
+
+    intern_fn(print, &print_fn, list(1, make_arg(a)), m);
+     
+    intern_fn(prmachine, &prmachine_fn, nil(), m);
+     
+    intern_fn(start-debug, &start_debug_fn, nil(), m);
+
+
+
+     
+    intern_fn(read-file, &read_file_fn, list(1, make_arg(filename)), m);
+
+    intern_fn(close-file, &close_file_fn, list(1, make_arg(handle)), m);
+
+    intern_fn(read-character, &read_char_fn, list(1, make_arg(handle)), m);
+
+
+
+
+    intern_fn(whitespace-p, &whitespacep_fn, list(1, make_arg(char)), m);
+
+    intern_fn(eof-p, &eof_p_fn, list(1, make_arg(char)), m);
+
+    intern_fn(string-to-symbol, &string_to_symbol_fn, 
+	      list(1, make_arg(string)), 
+	      m);
+
+    intern_fn(symbol-to-string, &symbol_to_string_fn, 
+	      list(1, make_arg(sym)), 
+	      m);
+     
+    intern_fn(string-to-number, &string_to_number_fn, 
+	      list(1, make_arg(string)), 
+	      m);
+
+    intern_fn(character-p, &character_p_fn, 
+	      list(1, make_arg(character)), 
+	      m);
+
+
+
+
+     intern_fn(plus, &plus_fn, list(1, make_arg(a), make_arg(b)), m);
+
+     intern_fn(minus, &minus_fn, list(1, make_arg(a), make_arg(b)), m);
+
+     intern_fn(multiply, &multiply_fn, list(1, make_arg(a), make_arg(b)), m);
+
+     intern_fn(divide, &divide_fn, list(1, make_arg(a), make_arg(b)), m);
+
+     intern_fn(>, &greater_fn, list(1, make_arg(a), make_arg(b)), m);
+
+     intern_fn(<, &less_fn, list(1, make_arg(a), make_arg(b)), m);
+
+}    
+
+
+// Down here are all the actual functions that are referred to up in
+// intern_builtin_functions.
 
 
 void set_fn(machine *m)
@@ -157,8 +319,6 @@ void leak_fn(machine *m)
      closure *sym = get_arg(sym, m);
      if (sym->in->type != SYMBOL && !nilp(sym)){
        closure *sig = build_signal(cons(string(L"\n\nHow can I forget\nthe juice of the orange\nthat is still dripping from my chin\n\n\nerror: I attempted to leak something that isn't a symbol: "), cons(sym, nil())), m);
-       //  printf("You leaked a non symbol, man \n");
-	  //print_closure((closure *) 5);
        toss_signal(sig, m);
      } else {
           closure *clos = copy_closure(get_arg(closure, m));
@@ -168,7 +328,6 @@ void leak_fn(machine *m)
 	  } else {
 	        clos->closing = cheap_acons(sym, symbol(LEAKED), clos->closing);
 	  }
-	  // TODO
 	  m->accum = clos;
      }
 }
@@ -501,105 +660,6 @@ void character_p_fn(machine *m){
 //--------------------------------------------------------------------//
 
 
-void new_basic_commands(machine *m)
-{	  
-    // TODO This is still more complicated than it should be.
-     closure *sym;
-     closure *val;
-
-     intern_fn(is, &is_fn, list(2, make_arg(a), make_arg(b)), m);
-  
-     intern_fn(set!, &set_fn, list(2, 
-				   quote(make_arg(a)), 
-				   make_arg(b)), m);
-     intern_fn(oif, &oif_fn, list(3, 
-				  make_arg(test),
-				  quote(make_arg(then)),//arg
-				  quote(make_arg(elser))), m); // nil
-
-     intern_fn(cons, &cons_fn, cons(make_arg(car), 
-				cons(make_arg(cdr), nil())), m);
-
-     intern_fn(car, &car_fn, cons(make_arg(cons), nil()), m);
-
-     intern_fn(cdr, &cdr_fn, cons(make_arg(cons), nil()), m);
-
-     intern_fn(atom-p, &atomp_fn, cons(make_arg(a), nil()), m);
-
-     intern_fn(print, &print_fn, cons(make_arg(a), nil()), m);
-
-     intern_fn(leak, &leak_fn, cons(make_arg(sym), 
-				cons(make_arg(closure), nil())), m);
-
-     intern_fn(closing-of, &closing_of_fn, cons(make_arg(a), nil()), m);
-        
-     intern_fn(comma, &comma_fn, cons(make_arg(closure),  nil()), m);
-   
-     intern_fn(prmachine, &prmachine_fn, nil(), m);
-
-     intern_fn(start-debug, &start_debug_fn, nil(), m);
-
-     intern_fn(call/cc, &callcc_fn, 
-	       cons(quote(make_arg(fn)), nil()), m);
-
-     intern_fn(signal, &signal_fn, cons(make_arg(sig),  nil()), m);
-
-     intern_fn(handle-signals, 
-	       &add_handler, 
-	       cons(quote(make_arg(handler)),  
-		    cons(quote(make_arg(body)), nil())), m);
-
-     intern_fn(unhandle-signal, &unhandle_signal, 
-	       cons(make_arg(sig),  nil()), m);
-
-     intern_fn(base-signal-handler, &base_handler, 
-	       cons(quote(make_arg(handler)),  nil()), m);
-     //maths
-
-     intern_fn(plus, &plus_fn, cons(make_arg(a), 
-				    cons(make_arg(b), nil())), m);
-     intern_fn(minus, &minus_fn, cons(make_arg(a), 
-				      cons(make_arg(b), nil())), m);
-     intern_fn(multiply, &multiply_fn, cons(make_arg(a), 
-					    cons(make_arg(b), nil())), m);
-     intern_fn(divide, &divide_fn, cons(make_arg(a), 
-					cons(make_arg(b), nil())), m);
-     intern_fn(>, &greater_fn, cons(make_arg(a), 
-				    cons(make_arg(b), nil())), m);
-     intern_fn(<, &less_fn, cons(make_arg(a), 
-				 cons(make_arg(b), nil())), m);
-
-     intern_fn(set-info, &set_info_fn, cons(make_arg(a), 
-					    cons(make_arg(info), nil())), m);
-
-     intern_fn(get-info, &get_info_fn, cons(make_arg(a), nil()), m);
-
-     intern_fn(whitespace-p, &whitespacep_fn, cons(make_arg(char), nil()), m);
-
-     intern_fn(eof-p, &eof_p_fn, cons(make_arg(char), nil()), m);
-
-     intern_fn(read-file, &read_file_fn, cons(make_arg(filename), nil()), m);
-
-     intern_fn(close-file, &close_file_fn, cons(make_arg(handle), nil()), m);
-
-     intern_fn(read-character, &read_char_fn, cons(make_arg(handle), nil()), m);
-
-     intern_fn(set-car, &set_car_fn, cons(make_arg(cons), 
-					    cons(make_arg(value), nil())), m);
-
-     intern_fn(set-cdr, &set_cdr_fn, cons(make_arg(cons), 
-					    cons(make_arg(value), nil())), m);
-
-     intern_fn(string-to-symbol, &string_to_symbol_fn, cons(make_arg(string), nil()), m);
-
-     intern_fn(symbol-to-string, &symbol_to_string_fn, cons(make_arg(sym), nil()), m);
-
-     intern_fn(string-to-number, &string_to_number_fn, cons(make_arg(string), nil()), m);
-
-     intern_fn(character-p, &character_p_fn, cons(make_arg(character), nil()), m);
-
-
-}    
 
 #endif
  

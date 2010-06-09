@@ -84,7 +84,7 @@ memory *memory_b;
 
 // garbage_check is a threshold; when memory->a > garbage_check
 // then collection should happen.
-int garbage_check = 1;
+int garbage_check = 30;
 
 // the_nil is a constant reverence to () (there is only one nil)
 closure *the_nil;
@@ -125,30 +125,32 @@ machine * collect()
     // same machine, uncollected.
     if (memory_a->size < garbage_check){
 	return memory_a->first->this;
+ 
+   } else {
+    
+	// memory_b is the temporary location to which we'll copy
+	// the stuff we want to keep.
+	memory_b = make_memory();
+    
+	// Here we'll copy the machine and nil over to the new
+	// memory --- they are the root of the memory tree.
+	repair_reference(memory_a->first->this);
+	the_nil = repair_reference(the_nil);
+    
+	collectify();
+    
+	free_memory(memory_a);
+	memory_a = memory_b;
+	
+	// Don't collect again until the memory doubles in size.
+	// TODO: upper bound is exp. memory growth. This will eventually
+	// fail.
+	garbage_check = memory_a->size * 2;
+	
+	return memory_a->first->this;
     }
-    
-    // memory_b is the temporary location to which we'll copy
-    // the stuff we want to keep.
-    memory_b = make_memory();
-    
-    // Here we'll copy the machine and nil over to the new
-    // memory --- they are the root of the memory tree.
-    repair_reference(memory_a->first->this);
-    the_nil = repair_reference(the_nil);
-    
-    collectify();
-    
-    free_memory(memory_a);
-    memory_a = memory_b;
-
-    // Don't collect again until the memory doubles in size.
-    // TODO: upper bound is exp. memory growth. This will eventually
-    // fail.
-    garbage_check = memory_a->size * 2;
-    
-    return memory_a->first->this;
 }
-
+    
 
 memory *make_memory()
 { 
@@ -387,6 +389,7 @@ void collectify()
 	  it->current_frame = repair_reference(it->current_frame);
 	  it->base_frame = repair_reference(it->base_frame);
 	  it->accum = repair_reference(it->accum);
+
      } else if (type == FRAME){
 	 //printf("collecting a frame\n");
 	  frame *it = ((frame *)(location));
@@ -395,12 +398,14 @@ void collectify()
 	  it->scope = repair_reference(it->scope);
 	  it->signal_handler = repair_reference(it->signal_handler);
 	  it->below = repair_reference(it->below);
+
      } else if (type == CLOSURE_OP ||
 		type == MACHINE_FLAG){
 	 //printf("collecting an operation\n");
 	  operation *it = ((operation *)(location));
 	  it->closure = repair_reference(it->closure);
 	  it->next = repair_reference(it->next);
+
      } else {
 	 //printf("type: %d from %d to ?", type, memory_b->from->offset);
 	  return;
