@@ -49,7 +49,9 @@ int main( int   argc,
      FILE *file = fopen("floor.8", "r");
      closure *rep = parse_file(file);
      while (rep != NULL){
+	 //	 print_closure(rep);printf("\n");
 	 m = eval(rep, m);
+	 if(m->accum) 
 	 rep = parse_file(file);
      }
      fclose(file);

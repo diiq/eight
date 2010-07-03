@@ -182,6 +182,7 @@ closure *assoc(closure *sym, closure *closing);
 closure *cheap_append(closure *a, closure *b);
 closure *append(closure *a, closure *b);
 
+closure *last(closure *list);
 
 //-------------------------- EIGHT.C ----------------------------//
 

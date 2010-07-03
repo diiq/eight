@@ -1,12 +1,9 @@
-# Doing this because making C hear a comma as an identifier is ugly.
-# WARNING this is a kludge and will need to be fixed.
-(set! , comma)
-
 # Temporary signal handler.
 (base-signal-handler 
  (set-info (' ((q) (print q))) 
 	   (cons (cons (' function-name) 
 		       (cons (' stupid-signal-handler) ())) ())))
+
 
 # unlambda, leak-all, and fn exist because of the fiddly nature of
 # closures in eight. If a symbol that is used in the lambda-list has
@@ -108,10 +105,14 @@ I received a signal in an unconventional format. Try using the form (poem-messag
 			      (print q)))
 			 ()))
 
+(def identity (x) 
+     "Returns argument unchanged."
+     x)
 
 (def no (x) 
      "Returns t if x is (). Returns () otherwise."
      (is x ()))
+
 
 (def cons-p (x) 
      "Returns a true-value if x is a cons-pair, and () otherwise."
@@ -252,7 +253,6 @@ In this way, rest can be generalized for new data types."
 # function out of a table of cases and actions. It will be used again
 # in the parser and elsewhere.
 
-
 (def inner-first (xs table)
      (oif ((car (car table)) xs)
 	  ((car (cdr (car table))) xs)
@@ -377,7 +377,6 @@ Returns
 	  (append (reverse (rest xs)) (list (first xs)))))
 
 
-
 (def add-parse-state ((' name))
  	   (set! (, (string-to-symbol 
 			(append (symbol-to-string name) 
@@ -395,11 +394,10 @@ Returns
 	  (parse-inner stream state accum (rest table))))
 
 (def parse (stream ((' state) null) (accum ())) ()
-     (print state)
      (parse-inner stream state accum 
-			    (, (string-to-symbol 
-				(append (symbol-to-string state) 
-					"-parse-table")))))
+		  (, (string-to-symbol 
+		      (append (symbol-to-string state) 
+			      "-parse-table")))))
 
 	
 (def parse-file-end (stream)
@@ -414,7 +412,7 @@ Returns
 
 (add-parse-action null
 		  parse-file-end
-		  (fn (stream accum) (list () ())))
+		  (fn (stream accum) (list () stream)))
 
 (add-parse-action null
 		  (fn (stream) (whitespace-p (first stream)))
@@ -427,6 +425,10 @@ Returns
 (add-parse-action null
 		  (fn (stream) (digit-p (first stream)))
 		  (fn (stream accum) (parse stream number ())))
+
+(add-parse-action null
+		  (fn (stream) (open-paren-p (first stream)))
+		  (fn (stream accum) (parse (rest stream) list ())))
 
 (add-parse-action null
 		  (fn (stream) (open-paren-p (first stream)))
@@ -455,12 +457,27 @@ Returns
 					    (join (first stream) accum))))
 
 (add-parse-action symbol
-		  (fn (stream) (or (parse-file-end stream)
-				   (whitespace-p (first stream))))
-		  (fn (stream accum) (list 
-				      (string-to-symbol (reverse accum))
-				      (rest stream))))
+		  (fn (stream) (or (close-paren-p (first stream))
+				   (open-paren-p (first stream))))
+		      (fn (stream accum) (list 
+				      (oif accum
+					   (string-to-symbol (reverse accum)))
+				      stream)))
 
+
+(add-parse-action symbol
+		  (fn (stream) (parse-file-end stream))
+		  (fn (stream accum) (list 
+				      (oif accum
+					   (string-to-symbol (reverse accum)))
+				      stream)))
+
+(add-parse-action symbol
+		  (fn (stream) (whitespace-p (first stream)))
+		  (fn (stream accum) (list 
+				      (oif accum
+					   (string-to-symbol (reverse accum)))
+				      (rest stream))))
 
 (add-parse-state number)
 (add-parse-action number
@@ -471,7 +488,11 @@ Returns
 		  (fn (stream) (digit-p (first stream)))
 		  (fn (stream accum) (parse (rest stream) 
 					    number 
-					    (join (first stream accum)))))
+					    (join (first stream) accum))))
+(add-parse-action number
+		  (fn (stream) (close-paren-p (first stream)))
+		  (fn (stream accum) (list (string-to-number (reverse accum))
+					   stream)))
 
 (add-parse-action number
 		  (fn (stream) (or (whitespace-p (first stream))
@@ -479,18 +500,9 @@ Returns
 		  (fn (stream accum) (list (string-to-number (reverse accum))
 					   (rest stream))))
 
-(add-parse-action number
-		  (fn (stream) (digit-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) 
-					    number 
-					    (join (first stream) accum))))
-
-
-
 
 
 (add-parse-state list)
-
 (add-parse-action list
 		  (fn (stream) (' t))
 		  (fn (stream accum) (with (ret (parse stream symbol ()))
@@ -500,7 +512,7 @@ Returns
 
 (add-parse-action list
 		  parse-file-end
-		  (fn (stream accum) (list (reverse accum) ())))
+		  (fn (stream accum) (list (reverse accum) stream)))
 
 (add-parse-action list
 		  (fn (stream) (whitespace-p (first stream)))
@@ -522,7 +534,6 @@ Returns
 						  list
 						  (join (first ret) accum)))))
 						 
-
 (add-parse-action list
 		  (fn (stream) (open-paren-p (first stream)))
 		  (fn (stream accum) (with (ret (parse (rest stream) list ()))
@@ -531,6 +542,39 @@ Returns
 						  (join (first ret) accum)))))
 						 
 (add-parse-action list
-		  (fn (stream) (close-paren-p (rest stream)))
+		  (fn (stream) (close-paren-p (first stream)))
 		  (fn (stream accum) (list (reverse accum) (rest stream))))
-		     
+
+
+
+# There are five parse states: null, symbol, comment, number, and list.
+
+
+(def parse-and-run (stream)
+     (with (ret (parse stream))
+	   (identity (, (first ret)))
+	   (first (rest ret))))
+
+(def parse-and-run-all (stream)
+     (with (stream (parse-and-run stream))
+	   (oif (no (parse-file-end stream))
+		(parse-and-run-all stream)
+		stream)))
+
+(def include (filename)
+     "Includes a file as if its contents were inserted at this point."
+     (close-file (parse-and-run-all (read-file filename))))
+     
+
+# Parsing the $ character flag:
+
+(add-parse-action null 
+		  (fn (stream) (is (first stream) $$))
+		  (fn (stream accum) (list (first (rest stream))
+					   (rest (rest stream)))))
+
+(add-parse-action list 
+		  (fn (stream) (is (first stream) $$))
+		  (fn (stream accum) (parse (rest (rest stream))
+					    list
+					    (join (first (rest stream)) accum))))

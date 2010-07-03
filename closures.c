@@ -275,5 +275,12 @@ closure *append(closure *a, closure *b)
      }
 };
 
-
+closure *last(closure *alist)
+{
+    if (alist->in->type != CONS_PAIR)
+	return alist;
+    if (nilp(cdr(alist)))
+	return car(alist);
+    return last(cdr(alist));
+}
 #endif

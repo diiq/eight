@@ -26,28 +26,30 @@
 #define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(L""#sym)), \
 				      m->current_frame))     		
 
-#define intern_fn(fn_name, fn_pointer, lambda_list, m)	do {		\
-    sym = new(closure);							\
-    sym->in = new(doubleref);						\
-    sym->in->type = BUILTIN;     					\
-    sym->type = DREF;							\
-    sym->in->builtin_fn = fn_pointer;					\
-    sym->closing = nil();						\
-    sym->in->info = nil();						\
-    val = list(2, lambda_list, sym);					\
-    val->in->info =							\
-      list(1, list(2, symbol(FUNCTION_NAME),				\
-		   symbol(string_to_symbol_id(L""#fn_name))));		\
-    internal_set(symbol(string_to_symbol_id(L""#fn_name)),		\
-		 val,							\
-		 m->current_frame,					\
-		 m->base_frame);					\
-  } while (0)
-
-#define start_interning_fns()  closure *sym; closure *val;
+#define intern_fn(fn_name, fn_pointer, lambda_list, m)	internify(L""#fn_name, fn_pointer, lambda_list, m)
 
 
 
+
+void internify(wchar_t *fn_name, void *fn_pointer, closure *lambda_list, machine *m)
+{
+    closure *sym; closure *val;
+    sym = new(closure);			
+    sym->in = new(doubleref);		
+    sym->in->type = BUILTIN;     	
+    sym->type = DREF;					
+    sym->in->builtin_fn = fn_pointer;			
+    sym->closing = nil();				
+    sym->in->info = nil();				
+    val = list(2, lambda_list, sym);			
+    val->in->info =					
+      list(1, list(2, symbol(FUNCTION_NAME),		
+		   symbol(string_to_symbol_id(fn_name))));
+    internal_set(symbol(string_to_symbol_id(fn_name)),
+		 val,				
+		 m->current_frame,		
+		 m->base_frame);		
+}
 
 
 void intern_builtin_functions(machine *m)
@@ -55,8 +57,6 @@ void intern_builtin_functions(machine *m)
     // This function nterns all of the builtin functions: oif, is, +, &c.
  
     // TODO This is still more complicated than it should be.
-
-    start_interning_fns();
 
     intern_fn(is, &is_fn, 
 	      list(2, make_arg(a), make_arg(b)), m);
@@ -76,7 +76,7 @@ void intern_builtin_functions(machine *m)
     
     intern_fn(cdr, &cdr_fn, list(1, make_arg(cons)), m);
     
-    intern_fn(comma, &comma_fn, list(1, make_arg(closure)), m);
+    internify(L",", &comma_fn, list(1, make_arg(closure)), m);
     
     intern_fn(call/cc, &callcc_fn, 
 	      list(1, quote(make_arg(fn))), 
@@ -183,17 +183,17 @@ void intern_builtin_functions(machine *m)
 
 
 
-     intern_fn(plus, &plus_fn, list(1, make_arg(a), make_arg(b)), m);
+     intern_fn(plus, &plus_fn, list(2, make_arg(a), make_arg(b)), m);
 
-     intern_fn(minus, &minus_fn, list(1, make_arg(a), make_arg(b)), m);
+     intern_fn(minus, &minus_fn, list(2, make_arg(a), make_arg(b)), m);
 
-     intern_fn(multiply, &multiply_fn, list(1, make_arg(a), make_arg(b)), m);
+     intern_fn(multiply, &multiply_fn, list(2, make_arg(a), make_arg(b)), m);
 
-     intern_fn(divide, &divide_fn, list(1, make_arg(a), make_arg(b)), m);
+     intern_fn(divide, &divide_fn, list(2, make_arg(a), make_arg(b)), m);
 
-     intern_fn(>, &greater_fn, list(1, make_arg(a), make_arg(b)), m);
+     intern_fn(>, &greater_fn, list(2, make_arg(a), make_arg(b)), m);
 
-     intern_fn(<, &less_fn, list(1, make_arg(a), make_arg(b)), m);
+     intern_fn(<, &less_fn, list(2, make_arg(a), make_arg(b)), m);
 
 }    
 
@@ -334,12 +334,13 @@ void leak_fn(machine *m)
 
 void comma_fn(machine *m)
 {     
-  operation* newop = new(operation);
-     closure *clos = get_arg(closure, m);
-     newop->next = m->current_frame->next;
-     newop->type = CLOSURE_OP;
-     newop->closure = clos;
-     m->current_frame->next = newop;
+    operation* newop = new(operation);
+    closure *clos = get_arg(closure, m);
+    //    m->current_frame = m->current_frame->below;
+    newop->next = m->current_frame->next;
+    newop->type = CLOSURE_OP;
+    newop->closure = clos;
+    m->current_frame->next = newop;
 }
 
 void callcc_fn(machine *m)
@@ -555,7 +556,7 @@ void read_file_fn(machine *m)
 void close_file_fn(machine *m)
 {
     closure *handle = get_arg(handle, m);
-    fclose((FILE *)handle->in->obj);
+    fclose((FILE *)(last(handle)->in->obj));
     m->accum = nil();
 }
 
@@ -597,7 +598,6 @@ void string_to_number_fn(machine *m){
     wchar_t *mstr = string_to_c_MALLOC(str);
     char *rstr = calloc(wcslen(mstr), sizeof(char));
     wcstombs(rstr, mstr, wcslen(mstr));
-
     m->accum = number(atoi(rstr));
     free(mstr);
 }
