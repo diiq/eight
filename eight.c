@@ -35,6 +35,7 @@ machine *init_8VM()
     insert_symbol(L",", COMMA);
     insert_symbol(L"...", ELIPSIS);
     insert_symbol(L"t", T);
+    insert_symbol(L"leaked-you-bastard", LEAKED);
     insert_symbol(L"function-name", FUNCTION_NAME);
 
     internal_set(symbol(T), symbol(T), bframe, bframe);
@@ -128,42 +129,35 @@ int length(closure *xs)
     return i;
 }
 
-closure *looker_up(closure *sym, frame *aframe)
+closure *looker_up(closure *sym, frame *current_frame, frame *base_frame)
 {
     // note that the value itself is the car of
     // what is returned; by setting the car of
     // what is returned, you can alter the value
     // destructively.
-    closure *local = assoc(sym, sym->closing);
+    closure *local = lassoc(sym, sym->closing);
     if (nilp(local) || leakedp(local)) 
-	return looker_up_internal(sym, aframe);
+	local = lassoc(sym, current_frame->scope);
+    if (nilp(local) || leakedp(local)) 
+	local = lassoc(sym, base_frame->scope);
+    if (leakedp(local)) 
+	return nil();
     return local;
 };
-
-closure *looker_up_internal(closure *sym, frame *aframe)
-{
-    closure* local =  assoc(sym, aframe->scope);
-    if (nilp(local) || leakedp(local)) {
-	if (aframe->below == NULL)
-	    return nil();
-	return looker_up_internal(sym, aframe->below);
-    }
-    return local;
-};
-
+ 
 void internal_set(closure *sym,
 		  closure *value,
 		  frame   *aframe,
 		  frame   *base_frame)
 {
-    closure *old = looker_up(sym, aframe);
+    closure *old = looker_up(sym, aframe, base_frame);
     if (nilp(old)){
 	base_frame->scope = cheap_acons(sym,
 					value,
 					base_frame->scope);
     } else {
 	memcpy(old->in->cons->car, value, sizeof(closure));
-    };
+    }
 }
 
 int commap(closure *arg)
@@ -404,11 +398,12 @@ int free_varp(closure *token,
 	   
 closure *find_free_variables(closure *code,
 			     frame* current_frame,
+			     frame* base_frame, 
 			     closure *accum)
 {
     if (free_varp(code, accum, current_frame)){
 	//print_closure(code);
-	closure* value = looker_up(code, current_frame);
+	closure* value = looker_up(code, current_frame, base_frame);
 	if (!nilp(value)){
 	    accum = cheap_acons(code, 
 				cheap_car(value), 
@@ -416,23 +411,26 @@ closure *find_free_variables(closure *code,
 	}
     } else if (code->in->type == CONS_PAIR && !quotep(code)){
 	accum = find_free_variables(car(code),
-				    current_frame, 
+				    current_frame,
+				    base_frame,
 				    accum);
 	accum = find_free_variables(cdr(code), 
-				    current_frame, 
+				    current_frame,
+				    base_frame,
 				    accum);
     }
     return accum;
 }
 
-closure *enclose(closure *code, frame *current_frame)
+closure *enclose(closure *code, frame *current_frame, frame* base_frame)
 {
     //     printf("I'm closing over ");
     //    print_closure(code);
     //printf(":\n");
     closure *ret = copy_closure(code);
     ret->closing = find_free_variables(code, 
-				       current_frame, 
+				       current_frame,
+				       base_frame, 
 				       code->closing);
     //printf("and the result is\n"); print_closure(ret->closing); printf("\n\n");
     return ret;
@@ -498,7 +496,7 @@ frame *new_frame(frame *below)
 
 void print_info(machine *m)
 {
-    printf("\ninstruction: ");
+    printf("\nnext instruction: ");
     if(m->current_frame->next){
 	print_op(m->current_frame->next);
     }
@@ -547,7 +545,7 @@ int virtual_machine_step(machine *m)
 	    // and putting it in accum, before replacing the machine
 	    // with the one contained inside the continuation.
 	    m->accum = car(looker_up(symbol(string_to_symbol_id(L"a")), 
-				     m->current_frame));
+				     m->current_frame, m->base_frame));
 	    m->base_frame = instruction->closure->in->mach->base_frame;
 	    m->current_frame = instruction->closure->in->mach->current_frame;    
 
@@ -555,7 +553,9 @@ int virtual_machine_step(machine *m)
 	    // A symbol should be looked up, and the result placed in 
 	    // accum. If it is undefined, a signal should be thrown.
 	    closure *res =  looker_up(instruction->closure,
-				      m->current_frame);
+				      m->current_frame, 
+				      m->base_frame);
+	    //print_closure(instruction->closure);printf("\n");
 	    if (nilp(res)) {
 		closure *sig = build_signal(cons(string(L"\n\n\nthere's an old man in town\nwho puts his spoon in his mouth\nand he swallows\nbut there's no soup in the bowl\n\n\nerror: I attempted to look up a symbol that was undefined: "), cons(instruction->closure, nil())), m);
 		toss_signal(sig, m);
@@ -578,7 +578,9 @@ int virtual_machine_step(machine *m)
 	    cl->closure = sub;
 
 	    m->current_frame->next = cl;
-	    m->current_frame->scope = instruction->closure->closing;
+	    m->current_frame->scope = 
+		cheap_append(instruction->closure->closing,
+			     m->current_frame->below->scope);
 
 	} else if (instruction->closure->in->type != CONS_PAIR){
 	    // This test is maybe a little dangerous, because it's a
@@ -589,8 +591,15 @@ int virtual_machine_step(machine *m)
 
 	} else if (quotep(instruction->closure)){
 	    // If the instruction has been quoted, enclose it.
+	    if((second(instruction->closure)->in->type == CONS_PAIR) &&
+	       equal(cheap_car(second(instruction->closure)), 
+		     symbol(string_to_symbol_id(L"cons")))) {
+		printf("\n\n\n");
+		print_closure(instruction->closure);
+		print_info(m);
+	    }
 	    m->accum = enclose(second(instruction->closure), 
-			       m->current_frame);
+			       m->current_frame, m->base_frame);
 	    // TODO sanity check, is lonely cdr?
 
 	} else if (car(instruction->closure)->in->symbol_id == CLEAR){
@@ -610,7 +619,7 @@ int virtual_machine_step(machine *m)
 	    // of instruction: the machine flag. Machine flag instructions
 	    // are internal notes from the interpreter to itself. In this
 	    // case, it's APPLY, which starts the function application 
-	    // process once the function istelf has been looked up.
+	    // process once the function itself has been looked up.
 
 	    operation* fn=new(operation);
 	    operation* apply=new(operation);
@@ -651,6 +660,7 @@ int virtual_machine_step(machine *m)
 		    n_frame = new_frame(m->current_frame);
 		}
 		n_frame->rib = m->accum->closing;
+		n_frame->scope = m->current_frame->scope;
 		  
 		operation* fn=new(operation);
 		fn->type = MACHINE_FLAG;

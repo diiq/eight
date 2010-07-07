@@ -192,8 +192,9 @@ int free_varp(closure *token,
 	      frame *current_frame);
 closure *find_free_variables(closure *code,
 			     frame* current_frame,
+			     frame* base_frame,
 			     closure *accum);
-closure *enclose(closure *code, frame *current_frame);
+closure *enclose(closure *code, frame *current_frame, frame *base_frame);
 
 
 // handling lambda-lists and function arguments
@@ -216,8 +217,8 @@ operation *instruction_list(closure *list, operation *doit);
 
 
 // symbol fetching and setting
-closure *looker_up(closure *sym, frame *aframe);
-closure *looker_up_internal(closure *sym, frame *aframe);
+closure *looker_up(closure *sym, frame *current_frame, frame *base_frame);
+
 void internal_set(closure *sym,
 		  closure *value,
 		  frame   *aframe,

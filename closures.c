@@ -244,6 +244,18 @@ closure *cheap_acons(closure *sym, closure *val, closure *closing)
      return ret;
 };
 
+closure *lassoc(closure *sym, closure* closing)
+{
+     if (nilp(closing)) {
+	  return nil();
+     }
+     if (equal(sym, cheap_car(cheap_car(closing))) &&
+	 !leakedp(cheap_cdr(cheap_car(closing)))) {
+	  return cheap_cdr(cheap_car(closing));
+     }
+     return assoc(sym, cheap_cdr(closing));
+};
+
 closure *assoc(closure *sym, closure* closing)
 {
      if (nilp(closing)) {

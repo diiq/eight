@@ -24,7 +24,7 @@
 #define make_arg(sym) symbol(string_to_symbol_id(L""#sym))
 
 #define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(L""#sym)), \
-				      m->current_frame))     		
+				      m->current_frame, m->base_frame))     		
 
 #define intern_fn(fn_name, fn_pointer, lambda_list, m)	internify(L""#fn_name, fn_pointer, lambda_list, m)
 

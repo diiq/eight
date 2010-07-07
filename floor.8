@@ -105,476 +105,476 @@ I received a signal in an unconventional format. Try using the form (poem-messag
 			      (print q)))
 			 ()))
 
-(def identity (x) 
-     "Returns argument unchanged."
-     x)
+## (def identity (x) 
+##      "Returns argument unchanged."
+##      x)
 
-(def no (x) 
-     "Returns t if x is (). Returns () otherwise."
-     (is x ()))
-
-
-(def cons-p (x) 
-     "Returns a true-value if x is a cons-pair, and () otherwise."
-     (no (atom-p x)))
-
-(def or (arg ... (' args))
-     "Performs logical or. Returns () if and only if all arguments
-evaluate to (). Or evaluates arguments in order, and stops when it
-reaches a non-() value.
-
-Or is particularly beautiful in Eight."
-  (oif args
-      (oif arg arg (or (* args)))
-      arg))
-
-(def copylist (xs) 
-     "Element-wise copies a list. This is useful because
-Eight passes arguments by reference; changing part of a list can have
-unintended consequences if some sub-lists are also used
-elsewhere. Copylist can help protect against that, when such mangling
-is not in your favor."
-     (oif (no xs) () (cons (car xs)
-			   (copylist (cdr xs)))))		
-
-(def list (... args) 
-     "List creates a list of its arguments in order."
-     (copylist args))
-
-(def assoc (key al)
-     "Assoc takes a key and a list of the form ((key1 value1) (key2
-value2) (key3 value3)). If I called assoc with the key 'key2 and the
-above list (which can be called an assoc-list or a rib), assoc will
-return (value2). Be careful, and note that this is a list of one
-element! If you want just the value, you must take (first (assoc key
-alist)).
-
-It may seem strange to return a list like this, but doing so has two
-advantages:
-
-1. If there is no corresponding value in the list, assoc returns (),
-but if the key is *bound* to (), assoc returns (()).
-
-2. If the value needs to be changed, setting the first element of the
-returned list will set the value in the original rib."
-
-  (oif (no al)
-       ()
-       (oif (is (car (car al)) key)
-	    (cdr (car al))
-	    (assoc key (cdr al)))))
+## (def no (x) 
+##      "Returns t if x is (). Returns () otherwise."
+##      (is x ()))
 
 
-(def help (what-you-want-help-with)
-     "Thought you'd be clever and (help help), eh? Good for you. Help
-returns a help-string for anything that has one. You can add a help
-string to anything by adding the list ('help string) to the info-rib
-of an object. With def, it's even easier --- just add your help string
-after the lambda list:
+## (def cons-p (x) 
+##      "Returns a true-value if x is a cons-pair, and () otherwise."
+##      (no (atom-p x)))
 
-  (def foo (bar)
-         ------> HERE <------
-      (blah blah baz))
+## (def or (arg ... (' args))
+##      "Performs logical or. Returns () if and only if all arguments
+## evaluate to (). Or evaluates arguments in order, and stops when it
+## reaches a non-() value.
 
- Good luck!"
-     (car (assoc (' help) (get-info what-you-want-help-with))))
+## Or is particularly beautiful in Eight."
+##   (oif args
+##       (oif arg arg (or (* args)))
+##       arg))
 
+## (def copylist (xs) 
+##      "Element-wise copies a list. This is useful because
+## Eight passes arguments by reference; changing part of a list can have
+## unintended consequences if some sub-lists are also used
+## elsewhere. Copylist can help protect against that, when such mangling
+## is not in your favor."
+##      (oif (no xs) () (cons (car xs)
+## 			   (copylist (cdr xs)))))		
 
-(def map1 (f xs)
-     "map1 applies a function to each element of a single list. Map is
-preferred unless speed is important. And if speed is important, why
-are you using Eight?"
-  (oif xs 
-       (cons (f (car xs)) 
-	     (map1 f (cdr xs)))))
+## (def list (... args) 
+##      "List creates a list of its arguments in order."
+##      (copylist args))
 
-# These tests will be useful for state-transitions in the
-# parser. We're getting to it, I promise!
+## (def assoc (key al)
+##      "Assoc takes a key and a list of the form ((key1 value1) (key2
+## value2) (key3 value3)). If I called assoc with the key 'key2 and the
+## above list (which can be called an assoc-list or a rib), assoc will
+## return (value2). Be careful, and note that this is a list of one
+## element! If you want just the value, you must take (first (assoc key
+## alist)).
 
-(def newline-p (char) (is char $
-)) # Note that the $ is followed by a newline!
-# $ marks a literal character.
+## It may seem strange to return a list like this, but doing so has two
+## advantages:
 
-(def open-paren-p (char) (is char $( ))
+## 1. If there is no corresponding value in the list, assoc returns (),
+## but if the key is *bound* to (), assoc returns (()).
 
-(def close-paren-p (char) (is char $) ))
+## 2. If the value needs to be changed, setting the first element of the
+## returned list will set the value in the original rib."
 
-(def doublequote-p (char) (is char $" )) #"<- unconfuses editors.
-
-(def character-marker-p (char) (is char $$ ))
-
-(def comment-character-p (char) (is char $# ))
-
-(def backslash-p (char) (is char $\ ))
-
-(def digit-p (char) (or (is char $0)
-			(is char $1)
-			(is char $2)
-			(is char $3)
-			(is char $4)
-			(is char $5)
-			(is char $6)
-			(is char $7)
-			(is char $8)
-			(is char $9)))
-
-# First and rest are high-level versions of car and cdr.  One of the
-# benefits of using first and rest is that they are modifiable. Here,
-# I'll make them treat file-streams like strings, making the parser
-# able to parse from a file or a string with no extra work!  One
-# possible optimization for Eight is to include a real table, instead
-# of using assoc tables like this. It will be easy enough to swap out
-# backends for first and rest if and when it's necessary.
-
-(set! first-table ())
-(set! rest-table ())
-
-(def add-first-function (test function)
-     "add-first-function takes two functions. The first is a boolean
-test with one argument. When (first x) is called, if no subsequent
-test returns true, this test will be called with x as it's
-argument. If it returns true, the second function will be called with
-x as the argument, and the result returned.
-
-In this way, first can be generalized for new data types."
-     (set! first-table (cons (list test function) first-table)))
-
-(def add-rest-function (test function)
-     "add-rest-function takes two functions. The first is a boolean
-test with one argument. When (rest x) is called, if no subsequent
-test returns true, this test will be called with x as it's
-argument. If it returns true, the second function will be called with
-x as the argument, and the result returned.
-
-In this way, rest can be generalized for new data types."
-     (set! rest-table (cons (list test function) rest-table)))
-
-# It probably makes sense to generalize this process of building a
-# function out of a table of cases and actions. It will be used again
-# in the parser and elsewhere.
-
-(def inner-first (xs table)
-     (oif ((car (car table)) xs)
-	  ((car (cdr (car table))) xs)
-	  (inner-first xs (cdr table))))
+##   (oif (no al)
+##        ()
+##        (oif (is (car (car al)) key)
+## 	    (cdr (car al))
+## 	    (assoc key (cdr al)))))
 
 
+## (def help (what-you-want-help-with)
+##      "Thought you'd be clever and (help help), eh? Good for you. Help
+## returns a help-string for anything that has one. You can add a help
+## string to anything by adding the list ('help string) to the info-rib
+## of an object. With def, it's even easier --- just add your help string
+## after the lambda list:
 
-(def first (xs)
-     "First returns the first element of a list, string, file-stream,
-&c. It can be modified using add-first-function.
+##   (def foo (bar)
+##          ------> HERE <------
+##       (blah blah baz))
 
- (join (first x) (rest x)) is equivalent to x."
-     (inner-first xs first-table))
-
-(def inner-rest (xs table)
-     (oif ((car (car table)) xs)
-	  ((car (cdr (car table))) xs)
-	  (inner-rest xs (cdr table))))
-
-
-(def rest (xs)
-     "rest returns all but the first element of a list, string, file-stream,
-&c. It can be modified using add-rest-function.
-
- (join (first x) (rest x)) is equivalent to x."
-     (inner-rest xs rest-table))
+##  Good luck!"
+##      (car (assoc (' help) (get-info what-you-want-help-with))))
 
 
-(add-first-function (fn (xs) (' t)) (fn (xs) (signal (list "
+## (def map1 (f xs)
+##      "map1 applies a function to each element of a single list. Map is
+## preferred unless speed is important. And if speed is important, why
+## are you using Eight?"
+##   (oif xs 
+##        (cons (f (car xs)) 
+## 	     (map1 f (cdr xs)))))
 
-The ten thousand things unshatter
-the film of an explosion
-played in reverse.
+## # These tests will be useful for state-transitions in the
+## # parser. We're getting to it, I promise!
 
-error: I tried to take the first element of something I don't know how to take the first element of:" xs))))
+## (def newline-p (char) (is char $
+## )) # Note that the $ is followed by a newline!
+## # $ marks a literal character.
 
-(add-first-function (fn (xs) (cons-p xs)) (fn (xs) (car xs)))  
+## (def open-paren-p (char) (is char $( ))
 
-(add-first-function (fn (xs) (is (car (assoc (' type)
-					     (get-info (car (cdr xs)))))
-				 (' stream)))
-		    (fn (xs) 
-			(set-cdr xs (list (read-character (car (cdr xs)))
-					  (car (cdr xs))))
-			(car xs)))
+## (def close-paren-p (char) (is char $) ))
+
+## (def doublequote-p (char) (is char $" )) #"<- unconfuses editors.
+
+## (def character-marker-p (char) (is char $$ ))
+
+## (def comment-character-p (char) (is char $# ))
+
+## (def backslash-p (char) (is char $\ ))
+
+## (def digit-p (char) (or (is char $0)
+## 			(is char $1)
+## 			(is char $2)
+## 			(is char $3)
+## 			(is char $4)
+## 			(is char $5)
+## 			(is char $6)
+## 			(is char $7)
+## 			(is char $8)
+## 			(is char $9)))
+
+## # First and rest are high-level versions of car and cdr.  One of the
+## # benefits of using first and rest is that they are modifiable. Here,
+## # I'll make them treat file-streams like strings, making the parser
+## # able to parse from a file or a string with no extra work!  One
+## # possible optimization for Eight is to include a real table, instead
+## # of using assoc tables like this. It will be easy enough to swap out
+## # backends for first and rest if and when it's necessary.
+
+## (set! first-table ())
+## (set! rest-table ())
+
+## (def add-first-function (test function)
+##      "add-first-function takes two functions. The first is a boolean
+## test with one argument. When (first x) is called, if no subsequent
+## test returns true, this test will be called with x as it's
+## argument. If it returns true, the second function will be called with
+## x as the argument, and the result returned.
+
+## In this way, first can be generalized for new data types."
+##      (set! first-table (cons (list test function) first-table)))
+
+## (def add-rest-function (test function)
+##      "add-rest-function takes two functions. The first is a boolean
+## test with one argument. When (rest x) is called, if no subsequent
+## test returns true, this test will be called with x as it's
+## argument. If it returns true, the second function will be called with
+## x as the argument, and the result returned.
+
+## In this way, rest can be generalized for new data types."
+##      (set! rest-table (cons (list test function) rest-table)))
+
+## # It probably makes sense to generalize this process of building a
+## # function out of a table of cases and actions. It will be used again
+## # in the parser and elsewhere.
+
+## (def inner-first (xs table)
+##      (oif ((car (car table)) xs)
+## 	  ((car (cdr (car table))) xs)
+## 	  (inner-first xs (cdr table))))
+
+
+
+## (def first (xs)
+##      "First returns the first element of a list, string, file-stream,
+## &c. It can be modified using add-first-function.
+
+##  (join (first x) (rest x)) is equivalent to x."
+##      (inner-first xs first-table))
+
+## (def inner-rest (xs table)
+##      (oif ((car (car table)) xs)
+## 	  ((car (cdr (car table))) xs)
+## 	  (inner-rest xs (cdr table))))
+
+
+## (def rest (xs)
+##      "rest returns all but the first element of a list, string, file-stream,
+## &c. It can be modified using add-rest-function.
+
+##  (join (first x) (rest x)) is equivalent to x."
+##      (inner-rest xs rest-table))
+
+
+## (add-first-function (fn (xs) (' t)) (fn (xs) (signal (list "
+
+## The ten thousand things unshatter
+## the film of an explosion
+## played in reverse.
+
+## error: I tried to take the first element of something I don't know how to take the first element of:" xs))))
+
+## (add-first-function (fn (xs) (cons-p xs)) (fn (xs) (car xs)))  
+
+## (add-first-function (fn (xs) (is (car (assoc (' type)
+## 					     (get-info (car (cdr xs)))))
+## 				 (' stream)))
+## 		    (fn (xs) 
+## 			(set-cdr xs (list (read-character (car (cdr xs)))
+## 					  (car (cdr xs))))
+## 			(car xs)))
 				
 	      
-(add-rest-function (fn (xs) (' t)) (fn (xs) (signal (list "
+## (add-rest-function (fn (xs) (' t)) (fn (xs) (signal (list "
 
-a man akimbo
-suddenly pulls his fist to his breast
-as he quietly accumulates
+## a man akimbo
+## suddenly pulls his fist to his breast
+## as he quietly accumulates
 
-error: I tried to take the rest of something I don't know how to take the rest of:" xs))))
+## error: I tried to take the rest of something I don't know how to take the rest of:" xs))))
 
-(add-rest-function (fn (xs) (cons-p xs)) (fn (xs) (cdr xs)))  
+## (add-rest-function (fn (xs) (cons-p xs)) (fn (xs) (cdr xs)))  
 
-(add-rest-function (fn (xs) (is (car (assoc (' type)
-					     (get-info (car (cdr xs)))))
-				 (' stream)))
-		   (fn (xs) 
-		       (set-cdr xs (list (read-character (car (cdr xs)))
-					 (car (cdr xs))))
-		       (cdr xs)))
+## (add-rest-function (fn (xs) (is (car (assoc (' type)
+## 					     (get-info (car (cdr xs)))))
+## 				 (' stream)))
+## 		   (fn (xs) 
+## 		       (set-cdr xs (list (read-character (car (cdr xs)))
+## 					 (car (cdr xs))))
+## 		       (cdr xs)))
 	
-(set! join cons)
+## (set! join cons)
 
-# Grand. From here on out, it should be first/rest/join not car/cdr/cons
+## # Grand. From here on out, it should be first/rest/join not car/cdr/cons
 
-(def append (xs ys ... (' yss))
-     "append takes n lists and joins them. Calling
+## (def append (xs ys ... (' yss))
+##      "append takes n lists and joins them. Calling
 
- (append '(1 2 3 4 5) '(6 7 8) '(9 10))
+##  (append '(1 2 3 4 5) '(6 7 8) '(9 10))
 
-returns:
+## returns:
 
- (1 2 3 4 5 6 7 8 9 10) "
-     (oif xs
-	  (join (first xs) (append (rest xs) ys (* yss)))
-	  (oif yss
-	       (append ys (* yss))
-	       ys)))
+##  (1 2 3 4 5 6 7 8 9 10) "
+##      (oif xs
+## 	  (join (first xs) (append (rest xs) ys (* yss)))
+## 	  (oif yss
+## 	       (append ys (* yss))
+## 	       ys)))
 		
-(def pair (xs (f list))
-     "pair takes a list and an optional function. It applies the
- function to successive pairs in the list. Because the default
- function is 'list', calling
+## (def pair (xs (f list))
+##      "pair takes a list and an optional function. It applies the
+##  function to successive pairs in the list. Because the default
+##  function is 'list', calling
 
- (pair '(1 2 3 4 5 6 7 8))
+##  (pair '(1 2 3 4 5 6 7 8))
 
-returns
+## returns
 
- ((1 2) (3 4) (5 6) (7 8)) "
+##  ((1 2) (3 4) (5 6) (7 8)) "
 
-     (oif (no xs)
-          ()
-	  (oif (no (rest xs))
-	       (list (list (first xs)))
-	       (join (f (first xs) (first (rest xs)))
-		     (pair (rest (rest xs)) f)))))
-
-
-# With is like the CL let. It uses an anomnymous function to
-# temporarily bind variables. It uses fewer parentheses, though.
-
-(def with ((' parms) ... (' body))
-     ((fn (, (map1 first (pair parms)))
-	  (* body))
-      (* (map1 (fn (x) (first (rest x))) (pair parms)))))
+##      (oif (no xs)
+##           ()
+## 	  (oif (no (rest xs))
+## 	       (list (list (first xs)))
+## 	       (join (f (first xs) (first (rest xs)))
+## 		     (pair (rest (rest xs)) f)))))
 
 
-(def reverse (xs)
-     "reverse reverses the order of a list. Calling
+## # With is like the CL let. It uses an anomnymous function to
+## # temporarily bind variables. It uses fewer parentheses, though.
 
- (reverse '(1 2 3 4 5))
-
-Returns
-
- (5 4 3 2 1)) "
-     (oif (no (rest xs))
-	  xs
-	  (append (reverse (rest xs)) (list (first xs)))))
+## (def with ((' parms) ... (' body))
+##      ((fn (, (map1 first (pair parms)))
+## 	  (* body))
+##       (* (map1 (fn (x) (first (rest x))) (pair parms)))))
 
 
-(def add-parse-state ((' name))
- 	   (set! (, (string-to-symbol 
-			(append (symbol-to-string name) 
-				"-parse-table"))) ()))
+## (def reverse (xs)
+##      "reverse reverses the order of a list. Calling
 
-(def add-parse-action ((' state) test action)
-     (with (table-name (string-to-symbol 
-			(append (symbol-to-string state) 
-				"-parse-table")))
-	   (set! (, table-name) (join (list test action) (, table-name)))))
+##  (reverse '(1 2 3 4 5))
 
-(def parse-inner (stream state accum table)
-     (oif ((first (first table)) stream)
-	  ((first (rest (first table))) stream accum)
-	  (parse-inner stream state accum (rest table))))
+## Returns
 
-(def parse (stream ((' state) null) (accum ())) ()
-     (parse-inner stream state accum 
-		  (, (string-to-symbol 
-		      (append (symbol-to-string state) 
-			      "-parse-table")))))
+##  (5 4 3 2 1)) "
+##      (oif (no (rest xs))
+## 	  xs
+## 	  (append (reverse (rest xs)) (list (first xs)))))
+
+
+## (def add-parse-state ((' name))
+##  	   (set! (, (string-to-symbol 
+## 			(append (symbol-to-string name) 
+## 				"-parse-table"))) ()))
+
+## (def add-parse-action ((' state) test action)
+##      (with (table-name (string-to-symbol 
+## 			(append (symbol-to-string state) 
+## 				"-parse-table")))
+## 	   (set! (, table-name) (join (list test action) (, table-name)))))
+
+## (def parse-inner (stream state accum table)
+##      (oif ((first (first table)) stream)
+## 	  ((first (rest (first table))) stream accum)
+## 	  (parse-inner stream state accum (rest table))))
+
+## (def parse (stream ((' state) null) (accum ())) ()
+##      (parse-inner stream state accum 
+## 		  (, (string-to-symbol 
+## 		      (append (symbol-to-string state) 
+## 			      "-parse-table")))))
 
 	
-(def parse-file-end (stream)
-     (or (eof-p (first stream))
-	 (no stream)))
+## (def parse-file-end (stream)
+##      (or (eof-p (first stream))
+## 	 (no stream)))
 
-(add-parse-state null)
+## (add-parse-state null)
 
-(add-parse-action null
-		  (fn (stream) (' t))
-		  (fn (stream accum) (parse stream symbol ())))
+## (add-parse-action null
+## 		  (fn (stream) (' t))
+## 		  (fn (stream accum) (parse stream symbol ())))
 
-(add-parse-action null
-		  parse-file-end
-		  (fn (stream accum) (list () stream)))
+## (add-parse-action null
+## 		  parse-file-end
+## 		  (fn (stream accum) (list () stream)))
 
-(add-parse-action null
-		  (fn (stream) (whitespace-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) null ())))
+## (add-parse-action null
+## 		  (fn (stream) (whitespace-p (first stream)))
+## 		  (fn (stream accum) (parse (rest stream) null ())))
 
-(add-parse-action null
-		  (fn (stream) (comment-character-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) comment ())))
+## (add-parse-action null
+## 		  (fn (stream) (comment-character-p (first stream)))
+## 		  (fn (stream accum) (parse (rest stream) comment ())))
 
-(add-parse-action null
-		  (fn (stream) (digit-p (first stream)))
-		  (fn (stream accum) (parse stream number ())))
+## (add-parse-action null
+## 		  (fn (stream) (digit-p (first stream)))
+## 		  (fn (stream accum) (parse stream number ())))
 
-(add-parse-action null
-		  (fn (stream) (open-paren-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) list ())))
+## (add-parse-action null
+## 		  (fn (stream) (open-paren-p (first stream)))
+## 		  (fn (stream accum) (parse (rest stream) list ())))
 
-(add-parse-action null
-		  (fn (stream) (open-paren-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) list ())))
+## (add-parse-action null
+## 		  (fn (stream) (open-paren-p (first stream)))
+## 		  (fn (stream accum) (parse (rest stream) list ())))
 
-(add-parse-state comment)
+## (add-parse-state comment)
 
-(add-parse-action comment
-		  (fn (stream) (' t))
-		  (fn (stream accum) (parse (rest stream) comment ())))
+## (add-parse-action comment
+## 		  (fn (stream) (' t))
+## 		  (fn (stream accum) (parse (rest stream) comment ())))
 
-(add-parse-action comment
-		  parse-file-end
-		  (fn (stream accum) (list () stream)))
+## (add-parse-action comment
+## 		  parse-file-end
+## 		  (fn (stream accum) (list () stream)))
 
-(add-parse-action comment
-		  (fn (stream) (newline-p (first stream)))
-		  (fn (stream accum) (list () (rest stream))))
-
-
-(add-parse-state symbol)
-(add-parse-action symbol
-		  (fn (stream) (' t))
-		  (fn (stream accum) (parse (rest stream) 
-					    symbol 
-					    (join (first stream) accum))))
-
-(add-parse-action symbol
-		  (fn (stream) (or (close-paren-p (first stream))
-				   (open-paren-p (first stream))))
-		      (fn (stream accum) (list 
-				      (oif accum
-					   (string-to-symbol (reverse accum)))
-				      stream)))
+## (add-parse-action comment
+## 		  (fn (stream) (newline-p (first stream)))
+## 		  (fn (stream accum) (list () (rest stream))))
 
 
-(add-parse-action symbol
-		  (fn (stream) (parse-file-end stream))
-		  (fn (stream accum) (list 
-				      (oif accum
-					   (string-to-symbol (reverse accum)))
-				      stream)))
+## (add-parse-state symbol)
+## (add-parse-action symbol
+## 		  (fn (stream) (' t))
+## 		  (fn (stream accum) (parse (rest stream) 
+## 					    symbol 
+## 					    (join (first stream) accum))))
 
-(add-parse-action symbol
-		  (fn (stream) (whitespace-p (first stream)))
-		  (fn (stream accum) (list 
-				      (oif accum
-					   (string-to-symbol (reverse accum)))
-				      (rest stream))))
-
-(add-parse-state number)
-(add-parse-action number
-		  (fn (stream) (' t))
-		  (fn (stream accum) (parse stream symbol accum)))
-
-(add-parse-action number
-		  (fn (stream) (digit-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) 
-					    number 
-					    (join (first stream) accum))))
-(add-parse-action number
-		  (fn (stream) (close-paren-p (first stream)))
-		  (fn (stream accum) (list (string-to-number (reverse accum))
-					   stream)))
-
-(add-parse-action number
-		  (fn (stream) (or (whitespace-p (first stream))
-				   (eof-p (first stream))))
-		  (fn (stream accum) (list (string-to-number (reverse accum))
-					   (rest stream))))
+## (add-parse-action symbol
+## 		  (fn (stream) (or (close-paren-p (first stream))
+## 				   (open-paren-p (first stream))))
+## 		      (fn (stream accum) (list 
+## 				      (oif accum
+## 					   (string-to-symbol (reverse accum)))
+## 				      stream)))
 
 
+## (add-parse-action symbol
+## 		  (fn (stream) (parse-file-end stream))
+## 		  (fn (stream accum) (list 
+## 				      (oif accum
+## 					   (string-to-symbol (reverse accum)))
+## 				      stream)))
 
-(add-parse-state list)
-(add-parse-action list
-		  (fn (stream) (' t))
-		  (fn (stream accum) (with (ret (parse stream symbol ()))
-					(parse (first (rest ret))
-					       list
-					       (join (first ret) accum)))))
+## (add-parse-action symbol
+## 		  (fn (stream) (whitespace-p (first stream)))
+## 		  (fn (stream accum) (list 
+## 				      (oif accum
+## 					   (string-to-symbol (reverse accum)))
+## 				      (rest stream))))
 
-(add-parse-action list
-		  parse-file-end
-		  (fn (stream accum) (list (reverse accum) stream)))
+## (add-parse-state number)
+## (add-parse-action number
+## 		  (fn (stream) (' t))
+## 		  (fn (stream accum) (parse stream symbol accum)))
 
-(add-parse-action list
-		  (fn (stream) (whitespace-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) list accum)))
+## (add-parse-action number
+## 		  (fn (stream) (digit-p (first stream)))
+## 		  (fn (stream accum) (parse (rest stream) 
+## 					    number 
+## 					    (join (first stream) accum))))
+## (add-parse-action number
+## 		  (fn (stream) (close-paren-p (first stream)))
+## 		  (fn (stream accum) (list (string-to-number (reverse accum))
+## 					   stream)))
 
-(add-parse-action list
-		  (fn (stream) (comment-character-p (first stream)))
-		  (fn (stream accum) (parse (first (rest 
-						    (parse (rest stream) 
-							   comment 
-							   ())))
-					    list
-					    accum)))
+## (add-parse-action number
+## 		  (fn (stream) (or (whitespace-p (first stream))
+## 				   (eof-p (first stream))))
+## 		  (fn (stream accum) (list (string-to-number (reverse accum))
+## 					   (rest stream))))
 
-(add-parse-action list
-		  (fn (stream) (digit-p (first stream)))
-		  (fn (stream accum) (with (ret (parse stream number ()))
-					   (parse (first (rest ret))
-						  list
-						  (join (first ret) accum)))))
+
+
+## (add-parse-state list)
+## (add-parse-action list
+## 		  (fn (stream) (' t))
+## 		  (fn (stream accum) (with (ret (parse stream symbol ()))
+## 					(parse (first (rest ret))
+## 					       list
+## 					       (join (first ret) accum)))))
+
+## (add-parse-action list
+## 		  parse-file-end
+## 		  (fn (stream accum) (list (reverse accum) stream)))
+
+## (add-parse-action list
+## 		  (fn (stream) (whitespace-p (first stream)))
+## 		  (fn (stream accum) (parse (rest stream) list accum)))
+
+## (add-parse-action list
+## 		  (fn (stream) (comment-character-p (first stream)))
+## 		  (fn (stream accum) (parse (first (rest 
+## 						    (parse (rest stream) 
+## 							   comment 
+## 							   ())))
+## 					    list
+## 					    accum)))
+
+## (add-parse-action list
+## 		  (fn (stream) (digit-p (first stream)))
+## 		  (fn (stream accum) (with (ret (parse stream number ()))
+## 					   (parse (first (rest ret))
+## 						  list
+## 						  (join (first ret) accum)))))
 						 
-(add-parse-action list
-		  (fn (stream) (open-paren-p (first stream)))
-		  (fn (stream accum) (with (ret (parse (rest stream) list ()))
-					   (parse (first (rest ret))
-						  list
-						  (join (first ret) accum)))))
+## (add-parse-action list
+## 		  (fn (stream) (open-paren-p (first stream)))
+## 		  (fn (stream accum) (with (ret (parse (rest stream) list ()))
+## 					   (parse (first (rest ret))
+## 						  list
+## 						  (join (first ret) accum)))))
 						 
-(add-parse-action list
-		  (fn (stream) (close-paren-p (first stream)))
-		  (fn (stream accum) (list (reverse accum) (rest stream))))
+## (add-parse-action list
+## 		  (fn (stream) (close-paren-p (first stream)))
+## 		  (fn (stream accum) (list (reverse accum) (rest stream))))
 
 
 
-# There are five parse states: null, symbol, comment, number, and list.
+## # There are five parse states: null, symbol, comment, number, and list.
 
 
-(def parse-and-run (stream)
-     (with (ret (parse stream))
-	   (identity (, (first ret)))
-	   (first (rest ret))))
+## (def parse-and-run (stream)
+##      (with (ret (parse stream))
+## 	   (identity (, (first ret)))
+## 	   (first (rest ret))))
 
-(def parse-and-run-all (stream)
-     (with (stream (parse-and-run stream))
-	   (oif (no (parse-file-end stream))
-		(parse-and-run-all stream)
-		stream)))
+## (def parse-and-run-all (stream)
+##      (with (stream (parse-and-run stream))
+## 	   (oif (no (parse-file-end stream))
+## 		(parse-and-run-all stream)
+## 		stream)))
 
-(def include (filename)
-     "Includes a file as if its contents were inserted at this point."
-     (close-file (parse-and-run-all (read-file filename))))
+## (def include (filename)
+##      "Includes a file as if its contents were inserted at this point."
+##      (close-file (parse-and-run-all (read-file filename))))
      
 
-# Parsing the $ character flag:
+## # Parsing the $ character flag:
 
-(add-parse-action null 
-		  (fn (stream) (is (first stream) $$))
-		  (fn (stream accum) (list (first (rest stream))
-					   (rest (rest stream)))))
+## (add-parse-action null 
+## 		  (fn (stream) (is (first stream) $$))
+## 		  (fn (stream accum) (list (first (rest stream))
+## 					   (rest (rest stream)))))
 
-(add-parse-action list 
-		  (fn (stream) (is (first stream) $$))
-		  (fn (stream accum) (parse (rest (rest stream))
-					    list
-					    (join (first (rest stream)) accum))))
+## (add-parse-action list 
+## 		  (fn (stream) (is (first stream) $$))
+## 		  (fn (stream accum) (parse (rest (rest stream))
+## 					    list
+## 					    (join (first (rest stream)) accum))))
