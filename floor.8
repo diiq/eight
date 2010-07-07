@@ -89,11 +89,11 @@
 # for the data. I like it this way though.
 
 (base-signal-handler (fn (q) 
-			 (oif (cons-p (car (cdr q))) 
+			 (oif (is (atom-p (car (cdr q))) ()) 
 			      ((fn () 
 				   (print (car (car (cdr q))))
 				   (print (car (cdr (car (cdr q)))))))
-			      (fn () (print "
+			      ((fn () (print "
 
 
 Water does not know
@@ -102,12 +102,11 @@ water does not know
 
 
 I received a signal in an unconventional format. Try using the form (poem-message data):")
-			      (print q)))
-			 ()))
+			      (print q))))))
 
 ## (def identity (x) 
 ##      "Returns argument unchanged."
-##      x)
+##      x)              
 
 ## (def no (x) 
 ##      "Returns t if x is (). Returns () otherwise."

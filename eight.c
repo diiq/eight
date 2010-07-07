@@ -136,21 +136,33 @@ closure *looker_up(closure *sym, frame *current_frame, frame *base_frame)
     // what is returned, you can alter the value
     // destructively.
     closure *local = lassoc(sym, sym->closing);
-    if (nilp(local) || leakedp(local)) 
+    if (nilp(local)) 
 	local = lassoc(sym, current_frame->scope);
-    if (nilp(local) || leakedp(local)) 
+    if (nilp(local))
 	local = lassoc(sym, base_frame->scope);
-    if (leakedp(local)) 
-	return nil();
     return local;
 };
  
+closure *set_looker_up(closure *sym, frame *current_frame, frame *base_frame)
+{
+    // note that the value itself is the car of
+    // what is returned; by setting the car of
+    // what is returned, you can alter the value
+    // destructively.
+    closure *local = assoc(sym, sym->closing);
+    if (nilp(local) || leakedp(local)) 
+	local = assoc(sym, current_frame->scope);
+    if (nilp(local) || leakedp(local)) 
+	local = assoc(sym, base_frame->scope);
+    return local;
+};
+
 void internal_set(closure *sym,
 		  closure *value,
 		  frame   *aframe,
 		  frame   *base_frame)
 {
-    closure *old = looker_up(sym, aframe, base_frame);
+    closure *old = set_looker_up(sym, aframe, base_frame);
     if (nilp(old)){
 	base_frame->scope = cheap_acons(sym,
 					value,
@@ -555,10 +567,13 @@ int virtual_machine_step(machine *m)
 	    closure *res =  looker_up(instruction->closure,
 				      m->current_frame, 
 				      m->base_frame);
-	    //print_closure(instruction->closure);printf("\n");
 	    if (nilp(res)) {
-		closure *sig = build_signal(cons(string(L"\n\n\nthere's an old man in town\nwho puts his spoon in his mouth\nand he swallows\nbut there's no soup in the bowl\n\n\nerror: I attempted to look up a symbol that was undefined: "), cons(instruction->closure, nil())), m);
-		toss_signal(sig, m);
+              print_closure(instruction->closure);printf(" is a-missing.\n");
+              print_info(m);
+              closure *sig = build_signal(cons(string(L"\n\n\nthere's an old man in town\nwho puts his spoon in his mouth\nand he swallows\nbut there's no soup in the bowl\n\n\nerror: I attempted to look up a symbol that was undefined: "), cons(instruction->closure, nil())), m);
+              toss_signal(sig, m);
+              
+              //error();
 	    } else {
 		m->accum = car(res);
 	    }
@@ -591,13 +606,6 @@ int virtual_machine_step(machine *m)
 
 	} else if (quotep(instruction->closure)){
 	    // If the instruction has been quoted, enclose it.
-	    if((second(instruction->closure)->in->type == CONS_PAIR) &&
-	       equal(cheap_car(second(instruction->closure)), 
-		     symbol(string_to_symbol_id(L"cons")))) {
-		printf("\n\n\n");
-		print_closure(instruction->closure);
-		print_info(m);
-	    }
 	    m->accum = enclose(second(instruction->closure), 
 			       m->current_frame, m->base_frame);
 	    // TODO sanity check, is lonely cdr?
