@@ -21,6 +21,7 @@
 //#define new(x) (x *)calloc(1, sizeof(x));
 
 int DEBUG = 0;
+int GARBAGE_COLLECT = 1;
 
 typedef struct closure_struct closure;
 typedef int symbol_id;

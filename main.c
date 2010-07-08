@@ -43,18 +43,20 @@ void interact_parse(machine *m)
 int main( int   argc,
           char *argv[] )
 {
+    GARBAGE_COLLECT = 0;
     setlocale (LC_ALL, "");
     initialize_symbol_table();
     machine *m = init_8VM();
     FILE *file = fopen("floor.8", "r");
     closure *rep = parse_file(file);
     while (rep != NULL){
-	print_closure(rep);printf("\n");
+	//	print_closure(rep);printf("\n");
 	m = eval(rep, m);
 	//if(m->accum) 
 	rep = parse_file(file);
     }
     fclose(file);
+    GARBAGE_COLLECT = 1;
     int i;
     if(argc == 1){
 	interact_parse(m);

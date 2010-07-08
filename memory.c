@@ -84,7 +84,7 @@ memory *memory_b;
 
 // garbage_check is a threshold; when memory->a > garbage_check
 // then collection should happen.
-int garbage_check = 3;
+int garbage_check = 5;
 
 // the_nil is a constant reverence to () (there is only one nil)
 closure *the_nil;

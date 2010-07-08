@@ -140,29 +140,19 @@ closure *looker_up(closure *sym, frame *current_frame, frame *base_frame)
 	local = lassoc(sym, current_frame->scope);
     if (nilp(local))
 	local = lassoc(sym, base_frame->scope);
+    else if (leakedp(local))
+	local = looker_up(sym, current_frame->below, base_frame);
+    //print_closure(local);printf("\n");
     return local;
 };
  
-closure *set_looker_up(closure *sym, frame *current_frame, frame *base_frame)
-{
-    // note that the value itself is the car of
-    // what is returned; by setting the car of
-    // what is returned, you can alter the value
-    // destructively.
-    closure *local = assoc(sym, sym->closing);
-    if (nilp(local) || leakedp(local)) 
-	local = assoc(sym, current_frame->scope);
-    if (nilp(local) || leakedp(local)) 
-	local = assoc(sym, base_frame->scope);
-    return local;
-};
 
 void internal_set(closure *sym,
 		  closure *value,
 		  frame   *aframe,
 		  frame   *base_frame)
 {
-    closure *old = set_looker_up(sym, aframe, base_frame);
+    closure *old = looker_up(sym, aframe, base_frame);
     if (nilp(old)){
 	base_frame->scope = cheap_acons(sym,
 					value,
@@ -248,7 +238,7 @@ operation *build_argument_chain(closure *lambda_list,
 	}
 	// If we're out of lambda list, we're done!
 	return current;
-    } else if (asterixp(cheap_car(arg_list))){
+    } else if (asterixp(car(arg_list))){
 	// If the first argument is a *arg, then we need to grab
 	// the actual argument, which is the ((asterix HERE) ...)
 	// then we build a continue-apply structure so that we can 
@@ -421,7 +411,7 @@ closure *find_free_variables(closure *code,
 				cheap_car(value), 
 				accum);
 	}
-    } else if (code->in->type == CONS_PAIR && !quotep(code)){
+    } else if (code->in->type == CONS_PAIR){
 	accum = find_free_variables(car(code),
 				    current_frame,
 				    base_frame,
@@ -443,7 +433,7 @@ closure *enclose(closure *code, frame *current_frame, frame* base_frame)
     ret->closing = find_free_variables(code, 
 				       current_frame,
 				       base_frame, 
-				       code->closing);
+				       nil());
     //printf("and the result is\n"); print_closure(ret->closing); printf("\n\n");
     return ret;
 };
@@ -568,8 +558,7 @@ int virtual_machine_step(machine *m)
 				      m->current_frame, 
 				      m->base_frame);
 	    if (nilp(res)) {
-              print_closure(instruction->closure);printf(" is a-missing.\n");
-              print_info(m);
+              //print_info(m);
               closure *sig = build_signal(cons(string(L"\n\n\nthere's an old man in town\nwho puts his spoon in his mouth\nand he swallows\nbut there's no soup in the bowl\n\n\nerror: I attempted to look up a symbol that was undefined: "), cons(instruction->closure, nil())), m);
               toss_signal(sig, m);
               
@@ -703,10 +692,14 @@ int virtual_machine_step(machine *m)
 		// arg.
 		// TODO: This is slow, and might be better done backwards
 		// with an extra 'reverse' at the end.
+		//print_closure(m->accum);printf("\n");
+		//print_closure(m->accum->closing);printf("\n");
 		closure *last = cdr(car(m->current_frame->rib));
 		last->in->cons->car = append(car(last),
 					     cons(m->accum, nil()));
-			 
+		//print_closure(last->in->cons->car);printf("\n");
+		//print_closure(last->in->cons->car->closing);printf("\n");
+		//printf("\n\n");
 	    } else {
 		// If it's a normal arg, just do this.
 		m->current_frame->rib = cheap_acons(instruction->closure,
@@ -763,7 +756,7 @@ machine* eval(closure *form, machine *m){
     int i = 0; 
     while (i == 0){
 	i = virtual_machine_step(m);
-	m = collect();
+	if (GARBAGE_COLLECT) m = collect();
     }
 
     return m;
