@@ -142,14 +142,14 @@ void intern_builtin_functions(machine *m)
 
 
 
-    intern_fn(print, &print_fn, list(1, make_arg(a)), m);
+    intern_fn(print, &print_fn, list(2, symbol(ELIPSIS), make_arg(a)), m);
      
     intern_fn(prmachine, &prmachine_fn, nil(), m);
      
     intern_fn(start-debug, &start_debug_fn, nil(), m);
 
-    intern_fn(print-stack-trace, 
-	      &print_stack_trace_fn, 
+    intern_fn(stack-trace, 
+	      &stack_trace_fn, 
 	      list(1, make_arg(continuation)), m);
 
      
@@ -295,8 +295,14 @@ void atomp_fn(machine *m)
 void print_fn(machine *m)
 {
      closure *a = get_arg(a, m);
-     print_closure(a);
-     printf("\n");
+     while(!nilp(a)){
+       if(stringp(car(a))){
+         wchar_t *str = string_to_c_MALLOC(car(a));
+         printf("%ls", str);
+       } else
+         print_closure(car(a));
+       a = cdr(a);
+     }
 }
 
 void prmachine_fn(machine *m)
@@ -310,11 +316,33 @@ void start_debug_fn(machine *m)
      DEBUG = 1;
 }
 
-void print_stack_trace_fn(machine *m)
+//--------- This is all for stack trace --------------//
+closure* build_stack_trace(frame *f);
+closure *frame_trace(frame *f);
+
+void stack_trace_fn(machine *m)
 {
     closure *a = get_arg(continuation, m);
-    print_stack_trace(second(a)->in->mach);
+    m->accum = build_stack_trace(second(a)->in->mach->current_frame);
 }
+
+closure *build_stack_trace(frame *f)
+{
+    if (f->below != NULL)
+      return cons(frame_trace(f),
+                  build_stack_trace(f->below));
+    return nil();
+}
+
+closure *frame_trace(frame *f)
+{
+    if (!nilp(f->function)){
+	return list(2, f->function, f->rib);
+    } 
+    return nil();
+}
+
+//-------------------- End --------------------------//
 
 void closing_of_fn(machine *m)
 {
@@ -618,6 +646,9 @@ void character_p_fn(machine *m){
 	m->accum = nil();
     }
 }
+
+
+
 //------------------------------- FFI --------------------------------//
 
 

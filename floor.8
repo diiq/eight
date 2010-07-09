@@ -77,16 +77,78 @@
 
 (set-info def (cons (cons (' function-name) (cons (' def) ())) ()))
 
-# There! That's it for the nitty-gritty. Now it's a matter of writing
-# enough of a language to build an elegant parser out of. The parser
-# built in C does not parse numbers, or special symbols like ' * @ and
-# ,. I suppose it could, but I'd rather build something that can make
-# read-macros look sissy.
+
+(def no (x) 
+     "Returns t if x is (). Returns () otherwise."
+     (is x ()))
+
+(def assoc (key al)
+     "Assoc takes a key and a list of the form ((key1 value1) (key2
+value2) (key3 value3)). If I called assoc with the key 'key2 and the
+above list (which can be called an assoc-list or a rib), assoc will
+return (value2). Be careful, and note that this is a list of one
+element! If you want just the value, you must take (first (assoc key
+alist)).
+
+It may seem strange to return a list like this, but doing so has two
+advantages:
+
+1. If there is no corresponding value in the list, assoc returns (),
+but if the key is *bound* to (), assoc returns (()).
+
+2. If the value needs to be changed, setting the first element of the
+returned list will set the value in the original rib."
+
+  (oif (no al)
+       ()
+       (oif (is (car (car al)) key)
+	    (cdr (car al))
+	    (assoc key (cdr al)))))
+
+
+
+(set! newline "
+")
+
+(def format-assoc (scope)
+     "format-scope takes an assoc list, and formats it as
+        key -> value.
+" 
+     (oif (handle-signals (fn (a) (' t))
+                          (no (is (, (car (car scope))) (car (cdr (car scope))))))
+          (print " |      " (car (car scope)) " -> " (car (cdr (car scope))) newline))
+     (oif (cdr scope)
+          (format-assoc (cdr scope))))
+ 
+
+(def format-stack-trace (trace)
+     (print " V" newline " " (car (assoc (' function-name) 
+                                (get-info (car (car trace))))) newline) 
+     (format-assoc (car (cdr (car trace))))
+     (oif (cdr trace)
+          (format-stack-trace (cdr trace))))
+
+
+(def print-stack-trace (continuation)
+     "print-stack-trace takes a continuation, and prints out the
+functions that were called (and the arguments they were called with)
+that lead up to the creation of that continuation. Try:
+
+ (print-stack-trace (call/cc indentity))
+
+This function is most frequently used when dealing with unexpected
+signals."
+     (format-stack-trace (stack-trace continuation)))
+
 
 # There! Now we're in condition to make a real base-signal-handler.
 # Signals are of the form (continuation data), and data is usually of
 # the form ("poem" other-stuff). It's OK if you use a different format
 # for the data. I like it this way though.
+
+(set-info base-signal-handler 
+          (cons (cons (' help) (cons "base-signal-handler sets the behavior of eight when it encounters an unhandled signal. The default is to print a stack trace, the signal poem/message, and then the first datum sent with the signal." ())) 
+                (get-info base-signal-handler)))
 
 (base-signal-handler (fn (q) 
 			 (print "
@@ -94,31 +156,30 @@
 Oh my, I've found an unhandled signal! Here's what happened:
 ")
 			 (print-stack-trace (car q))
-			 (print "Which signaled.")
-
 			 (oif (is (atom-p (car (cdr q))) ()) 
-			      ((fn () 
-				   (print (car (car (cdr q))))
-				   (print (car (cdr (car (cdr q)))))))
-			      ((fn () (print "
+				   (print (car (car (cdr q)))
+                                          (car (cdr (car (cdr q))))
+                                          newline)
+                                   (print "
 
 
-Water does not know
-the wrong way
-water does not know
+ Water does not know
+ the wrong way
+ water does not know
 
 
-I received a signal in an unconventional format. Try using the form (poem-message data):")
-			      (print q))))))
+I received a signal in an unconventional format. Try using the form (poem-message data):"
+                                          q)) ()))
+
+# There! That's it for the nitty-gritty. Now it's a matter of writing
+# enough of a language to build an elegant parser out of. The parser
+# built in C does not parse numbers, or special symbols like ' * @ and
+# ,. I suppose it could, but I'd rather build something that can make
+# read-macros look sissy.
 
 (def identity (x) 
      "Returns argument unchanged."
      x)              
-
-(def no (x) 
-     "Returns t if x is (). Returns () otherwise."
-     (is x ()))
-
 
 (def cons-p (x) 
      "Returns a true-value if x is a cons-pair, and () otherwise."
@@ -147,28 +208,7 @@ is not in your favor."
      "List creates a list of its arguments in order."
      (copylist args))
 
-(def assoc (key al)
-     "Assoc takes a key and a list of the form ((key1 value1) (key2
-value2) (key3 value3)). If I called assoc with the key 'key2 and the
-above list (which can be called an assoc-list or a rib), assoc will
-return (value2). Be careful, and note that this is a list of one
-element! If you want just the value, you must take (first (assoc key
-alist)).
 
-It may seem strange to return a list like this, but doing so has two
-advantages:
-
-1. If there is no corresponding value in the list, assoc returns (),
-but if the key is *bound* to (), assoc returns (()).
-
-2. If the value needs to be changed, setting the first element of the
-returned list will set the value in the original rib."
-
-  (oif (no al)
-       ()
-       (oif (is (car (car al)) key)
-	    (cdr (car al))
-	    (assoc key (cdr al)))))
 
 
 (def help (what-you-want-help-with)
@@ -183,7 +223,9 @@ after the lambda list:
       (blah blah baz))
 
  Good luck!"
-     (car (assoc (' help) (get-info what-you-want-help-with))))
+     (print newline 
+            (car (assoc (' help) (get-info what-you-want-help-with))) 
+            newline) ())
 
 
 (def map1 (f xs)

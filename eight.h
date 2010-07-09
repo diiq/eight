@@ -246,9 +246,6 @@ void print_closure(closure *x);
 void print_cont(operation *ins);
 void print_op(operation* ins);
 void print_machine(machine *m);
-void print_stack_trace(machine *m);
-void print_frame_trace(frame *f, frame *base_frame);
-void print_scope(closure *scope, frame *base_frame);
 
 
 //--------------------- STRINGS.C -----------------------//
@@ -295,7 +292,7 @@ void base_handler(machine *m);
 void print_fn(machine *m);
 void prmachine_fn(machine *m);
 void start_debug_fn(machine *m);
-void print_stack_trace_fn(machine *m);
+void stack_trace_fn(machine *m);
 
 //maths
 void plus_fn(machine *m);     
