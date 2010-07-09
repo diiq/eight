@@ -148,7 +148,9 @@ void intern_builtin_functions(machine *m)
      
     intern_fn(start-debug, &start_debug_fn, nil(), m);
 
-
+    intern_fn(print-stack-trace, 
+	      &print_stack_trace_fn, 
+	      list(1, make_arg(continuation)), m);
 
      
     intern_fn(read-file, &read_file_fn, list(1, make_arg(filename)), m);
@@ -308,6 +310,12 @@ void start_debug_fn(machine *m)
      DEBUG = 1;
 }
 
+void print_stack_trace_fn(machine *m)
+{
+    closure *a = get_arg(continuation, m);
+    print_stack_trace(second(a)->in->mach);
+}
+
 void closing_of_fn(machine *m)
 {
      closure *a = get_arg(a, m);
@@ -354,8 +362,8 @@ void callcc_fn(machine *m)
      ret->in->info = nil();
      ret->in->mach = stack_copy(m);
      // (quote ((a) ret))
-     closure *cont = cons(cons(make_arg(a),  nil()),
-				cons(ret, nil()));
+     closure *cont = list(2, list(1, make_arg(a)),
+			  ret);
      cont->in->info = 
 	 cons(cons(symbol(FUNCTION_NAME),		
 		   cons(symbol(string_to_symbol_id(L"continuation")),   

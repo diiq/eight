@@ -49,7 +49,7 @@
 (set! fn (' (((' lambda-list) ... (' code))
 	     (set-info (cons lambda-list 
 			     (leak-all (unlambda lambda-list) code))
-	    (cons (cons (' function-name) (cons (' anonymous) ())) ())))))
+	    (cons (cons (' function-name) (cons (' anonymous-function) ())) ())))))
 
 (set-info fn (cons (cons (' function-name) (cons (' fn) ())) ()))
 
@@ -89,6 +89,13 @@
 # for the data. I like it this way though.
 
 (base-signal-handler (fn (q) 
+			 (print "
+
+Oh my, I've found an unhandled signal! Here's what happened:
+")
+			 (print-stack-trace (car q))
+			 (print "Which signaled.")
+
 			 (oif (is (atom-p (car (cdr q))) ()) 
 			      ((fn () 
 				   (print (car (car (cdr q))))
@@ -198,7 +205,7 @@ are you using Eight?"
 
 (def close-paren-p (char) (is char $) ))
 
-(def doublequote-p (char) (is char $" )) #"<- unconfuses editors.
+(def doublequote-p (char) (is char $" )) #"))<- unconfuses editors.
 
 (def character-marker-p (char) (is char $$ ))
 

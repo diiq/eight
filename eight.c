@@ -455,6 +455,7 @@ frame *copy_frame(frame *fram)
     ret->scope = fram->scope;
     ret->rib = fram->rib;
     ret->next = fram->next;
+    ret->function = fram->function;
     ret->below = copy_frame(fram->below);
     return ret;
 }
@@ -493,6 +494,7 @@ frame *new_frame(frame *below)
     ret->below = below;
     ret->scope = nil();
     ret->rib = nil();
+    ret->function = nil();
     return ret;
 }
 
@@ -643,7 +645,7 @@ int virtual_machine_step(machine *m)
 	    // evaluate the arguments before actually performing the 
 	    // function. 
 	    closure *name = cheap_car(assoc(symbol(FUNCTION_NAME), 
-					    m->accum->in->info));
+					     m->accum->in->info));
 	    //print_closure(name);
 	    if (nilp(name)){
 		closure *sig = build_signal(cons(string(L"\n\n\nI am one of the ten thousand things\nbut I cannot forget that I am also an I\nso I hope and act and dream instead\n\n\nI attempted to treat something as a function, but it wasn't:"), cons(m->accum, nil())), m);
@@ -658,7 +660,9 @@ int virtual_machine_step(machine *m)
 		}
 		n_frame->rib = m->accum->closing;
 		n_frame->scope = m->current_frame->scope;
-		  
+
+		n_frame->function = m->accum;
+
 		operation* fn=new(operation);
 		fn->type = MACHINE_FLAG;
 		fn->flag = DO; 

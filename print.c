@@ -110,3 +110,59 @@ void print_string(closure *a)
   print_string_internal(a);
   printf("\"");
 }
+
+
+
+
+/// TODO: asking for a stack trace should return an list, so that it
+/// can be manipulated and printed as-you-please.
+
+void print_stack_trace_i(frame *f, frame *base_frame)
+{
+    if (f->below != NULL){
+	print_stack_trace_i(f->below, base_frame);
+	if (f->below->below != NULL){
+	    	printf("called ");
+	}
+        print_frame_trace(f, base_frame);
+    }
+}
+
+void print_stack_trace(machine *m)
+{
+    print_stack_trace_i(m->current_frame, m->base_frame);
+}
+
+
+void print_frame_trace(frame *f, frame *base_frame)
+{
+    if (!nilp(f->function)){
+	closure *name = cheap_car(assoc(symbol(FUNCTION_NAME), 
+					f->function->in->info));
+	print_closure(name);
+    }
+	printf(", with:\n");
+	print_scope(f->rib, base_frame);
+    
+}
+
+void print_scope(closure *scope, frame *base_frame)
+{
+    if (!nilp(scope)){
+	printf("        ");
+	print_closure(car(scope));
+	printf("\n");
+	print_scope(cdr(scope), base_frame);
+    }
+}
+		 
+
+
+
+
+	    // print_chik, with chik = (5 5),
+	    //                  booper = (() square), called:
+	    // print, with ((a 25)), called:
+	    // hooper, which signaled!
+
+ 	

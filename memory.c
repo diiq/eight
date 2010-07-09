@@ -17,7 +17,7 @@
 #include "eight.h"
 
 #define BLOCK_SIZE 1048576
-
+#define MIN_SIZE   5
 //----------------------------- STRUCTURES ----------------------------//
 
 /* A memory block is a big block of memory. Astonishing, right? Memory
@@ -145,7 +145,7 @@ machine * collect()
 	// Don't collect again until the memory doubles in size.
 	// TODO: upper bound is exp. memory growth. This will eventually
 	// fail.
-	garbage_check = memory_a->size * 2;
+	garbage_check = (memory_a->size*2)<MIN_SIZE ? MIN_SIZE : memory_a->size * 2;
 	
 	return memory_a->first->this;
     }
@@ -397,6 +397,7 @@ void collectify()
 	  it->rib = repair_reference(it->rib);
 	  it->scope = repair_reference(it->scope);
 	  it->signal_handler = repair_reference(it->signal_handler);
+	  it->function = repair_reference(it->function);
 	  it->below = repair_reference(it->below);
 
      } else if (type == CLOSURE_OP ||

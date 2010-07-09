@@ -68,12 +68,13 @@ struct operation_struct{
 };
 
 struct frame_struct {
-     obj_type type;
-     operation   *next; 
-     closure     *rib;
-     closure     *scope;
-     closure     *signal_handler; 
-     frame       *below;
+    obj_type type;
+    operation   *next; 
+    closure     *rib;
+    closure     *scope;
+    closure     *signal_handler; 
+    closure     *function;
+    frame       *below;
 };
 
 typedef struct {
@@ -245,7 +246,9 @@ void print_closure(closure *x);
 void print_cont(operation *ins);
 void print_op(operation* ins);
 void print_machine(machine *m);
-void new_basic_commands(machine *m);
+void print_stack_trace(machine *m);
+void print_frame_trace(frame *f, frame *base_frame);
+void print_scope(closure *scope, frame *base_frame);
 
 
 //--------------------- STRINGS.C -----------------------//
@@ -260,6 +263,8 @@ wchar_t* string_to_c_MALLOC(closure *a);
 closure *parse_file(FILE *file);
 
 //------------------ BASIC_FUNCTIONS.C -------------------//
+
+void new_basic_commands(machine *m);
 
 // basics
 void is_fn(machine *m);
@@ -290,6 +295,7 @@ void base_handler(machine *m);
 void print_fn(machine *m);
 void prmachine_fn(machine *m);
 void start_debug_fn(machine *m);
+void print_stack_trace_fn(machine *m);
 
 //maths
 void plus_fn(machine *m);     
