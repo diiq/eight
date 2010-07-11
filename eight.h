@@ -15,13 +15,18 @@
 #ifndef EIGHT_HEADER
 #define EIGHT_HEADER
 
+#include <stdio.h>
+#include <locale.h>
 #include <wchar.h> 
+
 // trying to move towards good unicode support, but
 //I need people who *use* unicode support to give me feedback.
 
 
 #define new(x) (x *)allocate(sizeof(x))
 
+#define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(L""#sym)), \
+				      m->current_frame, m->base_frame))     	
 int DEBUG = 0;
 int GARBAGE_COLLECT = 1; 
 // Garbage collection will NOT occur when this is 0.
@@ -185,6 +190,7 @@ int quotep(closure *sym);
 int elipsisp(closure *sym);
 int optional_argp(closure *sym);
 int e_argp(closure *sym);
+int leakedp(closure *x);
 
 int length(closure *a);
 
@@ -362,6 +368,10 @@ void character_p_fn(machine *m);
 void string_to_symbol_fn(machine *m);
 void symbol_to_string_fn(machine *m);
 void string_to_number_fn(machine *m);
+
+void load_library_fn(machine *m);
+void load_library_object_fn(machine *m);
+void call_library_function_fn(machine *m);
 
 void intern_builtin_functions(machine *m);
 

@@ -11,9 +11,6 @@
 
 ***************************************************************************/
 
-#include <stdio.h>
-#include <locale.h>
-
 #include "eight.h"
 #include "closures.c"
 #include "eight.c"
@@ -73,3 +70,5 @@ int main( int   argc,
     }
     return 0; 
 }
+
+

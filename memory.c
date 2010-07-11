@@ -13,6 +13,8 @@
  associated testing routines.
 
 ***************************************************************************/
+#ifndef EIGHT_MEMORY
+#define EIGHT_MEMORY
 
 #include "eight.h"
 
@@ -505,3 +507,6 @@ void test_memory(){
      print_machine(goo);
      print_heap(memory_a);
 }
+
+
+#endif

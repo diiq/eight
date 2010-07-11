@@ -11,6 +11,9 @@
 
 ***************************************************************************/
 
+#ifndef EIGHT_STRING
+#define EIGHT_STRING
+
 #include "eight.h"
 #include <math.h>
 
@@ -73,3 +76,4 @@ closure *string_to_number(closure *a)
 }
 
 
+#endif

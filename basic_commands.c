@@ -23,14 +23,7 @@
 
 #define make_arg(sym) symbol(string_to_symbol_id(L""#sym))
 
-#define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(L""#sym)), \
-				      m->current_frame, m->base_frame))     		
-
-#define intern_fn(fn_name, fn_pointer, lambda_list, m)	internify(L""#fn_name, fn_pointer, lambda_list, m)
-
-
-
-
+	
 void internify(wchar_t *fn_name, void *fn_pointer, closure *lambda_list, machine *m)
 {
     closure *sym; closure *val;
@@ -58,40 +51,40 @@ void intern_builtin_functions(machine *m)
  
     // TODO This is still more complicated than it should be.
 
-    intern_fn(is, &is_fn, 
+    internify(L"is", &is_fn, 
 	      list(2, make_arg(a), make_arg(b)), m);
  
     internify(L"'", 
 	      &quote_fn, 
 	      list(1, make_arg(x)), m);
     
-    intern_fn(oif, &oif_fn, 
+    internify(L"oif", &oif_fn, 
 	      list(3, 
 		   make_arg(test),
 		   quote(make_arg(then)),
 		   quote(make_arg(elser))), 
 	      m); 
     
-    intern_fn(cons, &cons_fn, 
+    internify(L"cons", &cons_fn, 
 	      list(2, make_arg(car), make_arg(cdr)), 
 	       m);
     
-    intern_fn(car, &car_fn, list(1, make_arg(cons)), m);
+    internify(L"car", &car_fn, list(1, make_arg(cons)), m);
     
-    intern_fn(cdr, &cdr_fn, list(1, make_arg(cons)), m);
+    internify(L"cdr", &cdr_fn, list(1, make_arg(cons)), m);
     
     internify(L",", &comma_fn, list(1, make_arg(closure)), m);
     
-    intern_fn(call/cc, &callcc_fn, 
+    internify(L"call/cc", &callcc_fn, 
 	      list(1, quote(make_arg(fn))), 
 	      m);
     
     
     
     
-    intern_fn(atom-p, &atomp_fn, list(1, make_arg(a)), m);
+    internify(L"atom-p", &atomp_fn, list(1, make_arg(a)), m);
     
-    intern_fn(leak, &leak_fn, 
+    internify(L"leak", &leak_fn, 
 	      list(2, make_arg(sym), make_arg(closure)), 
 	      m);
     
@@ -99,15 +92,15 @@ void intern_builtin_functions(machine *m)
     
     
 
-    intern_fn(set!, &set_fn, 
+    internify(L"set!", &set_fn, 
 	      list(2, quote(make_arg(a)), make_arg(b)), 
 	      m);
     
-    intern_fn(set-car, &set_car_fn, 
+    internify(L"set-car", &set_car_fn, 
 	      list(2, make_arg(cons), make_arg(value)), 
 	      m);
     
-    intern_fn(set-cdr, &set_cdr_fn, 
+    internify(L"set-cdr", &set_cdr_fn, 
 	      list(2, make_arg(cons), make_arg(value)), 
 	      m);
     
@@ -115,19 +108,19 @@ void intern_builtin_functions(machine *m)
     
     
     
-    intern_fn(signal, &signal_fn, list(1, make_arg(sig)), m);
+    internify(L"signal", &signal_fn, list(1, make_arg(sig)), m);
      
-    intern_fn(handle-signals, &add_handler, 
+    internify(L"handle-signals", &add_handler, 
 	      list(2,
 		   quote(make_arg(handler)),  
 		   quote(make_arg(body))), 
 	      m);
      
-    intern_fn(unhandle-signal, &unhandle_signal, 
+    internify(L"unhandle-signal", &unhandle_signal, 
 	      list(1, make_arg(sig)), 
 	      m);
      
-    intern_fn(base-signal-handler, &base_handler, 
+    internify(L"base-signal-handler", &base_handler, 
 	      list(1, quote(make_arg(handler))), 
 	      m);
 
@@ -135,72 +128,83 @@ void intern_builtin_functions(machine *m)
 
 
 
-    intern_fn(closing-of, &closing_of_fn, list(1, make_arg(a)), m);
+    internify(L"closing-of", &closing_of_fn, list(1, make_arg(a)), m);
 
-    intern_fn(set-info, &set_info_fn, 
+    internify(L"set-info", &set_info_fn, 
 	      list(2, make_arg(a), make_arg(info)), 
 	      m);
 
-    intern_fn(get-info, &get_info_fn, list(1, make_arg(a)), m);
+    internify(L"get-info", &get_info_fn, list(1, make_arg(a)), m);
 
 
 
 
-    intern_fn(print, &print_fn, list(2, symbol(ELIPSIS), make_arg(a)), m);
+    internify(L"print", &print_fn, list(2, symbol(ELIPSIS), make_arg(a)), m);
      
-    intern_fn(prmachine, &prmachine_fn, nil(), m);
+    internify(L"prmachine", &prmachine_fn, nil(), m);
      
-    intern_fn(start-debug, &start_debug_fn, nil(), m);
+    internify(L"start-debug", &start_debug_fn, nil(), m);
 
-    intern_fn(stack-trace, 
+    internify(L"stack-trace", 
 	      &stack_trace_fn, 
 	      list(1, make_arg(continuation)), m);
 
      
-    intern_fn(read-file, &read_file_fn, list(1, make_arg(filename)), m);
+    internify(L"read-file", &read_file_fn, list(1, make_arg(filename)), m);
 
-    intern_fn(close-file, &close_file_fn, list(1, make_arg(handle)), m);
+    internify(L"close-file", &close_file_fn, list(1, make_arg(handle)), m);
 
-    intern_fn(read-character, &read_char_fn, list(1, make_arg(handle)), m);
-
-
+    internify(L"read-character", &read_char_fn, list(1, make_arg(handle)), m);
 
 
-    intern_fn(whitespace-p, &whitespacep_fn, list(1, make_arg(char)), m);
 
-    intern_fn(eof-p, &eof_p_fn, list(1, make_arg(char)), m);
 
-    intern_fn(string-to-symbol, &string_to_symbol_fn, 
+    internify(L"whitespace-p", &whitespacep_fn, list(1, make_arg(char)), m);
+
+    internify(L"eof-p", &eof_p_fn, list(1, make_arg(char)), m);
+
+    internify(L"string-to-symbol", &string_to_symbol_fn, 
 	      list(1, make_arg(string)), 
 	      m);
 
-    intern_fn(symbol-to-string, &symbol_to_string_fn, 
+    internify(L"symbol-to-string", &symbol_to_string_fn, 
 	      list(1, make_arg(sym)), 
 	      m);
      
-    intern_fn(string-to-number, &string_to_number_fn, 
+    internify(L"string-to-number", &string_to_number_fn, 
 	      list(1, make_arg(string)), 
 	      m);
 
-    intern_fn(character-p, &character_p_fn, 
+    internify(L"character-p", &character_p_fn, 
 	      list(1, make_arg(character)), 
 	      m);
 
 
 
 
-     intern_fn(plus, &plus_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L"plus", &plus_fn, list(2, make_arg(a), make_arg(b)), m);
 
-     intern_fn(minus, &minus_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L"minus", &minus_fn, list(2, make_arg(a), make_arg(b)), m);
 
-     intern_fn(multiply, &multiply_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L"multiply", &multiply_fn, list(2, make_arg(a), make_arg(b)), m);
 
-     intern_fn(divide, &divide_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L"divide", &divide_fn, list(2, make_arg(a), make_arg(b)), m);
 
-     intern_fn(>, &greater_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L">", &greater_fn, list(2, make_arg(a), make_arg(b)), m);
 
-     intern_fn(<, &less_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L"<", &less_fn, list(2, make_arg(a), make_arg(b)), m);
 
+     /*
+     internify(L"load-library", &load_library_fn, list(1, make_arg(name)), m);
+
+     internify(L"load-library-object", 
+	       &load_library_object_fn, 
+	       list(2, make_arg(name), make_arg(library)), m);
+
+     //     internify(L"call-library-function", 
+     //	       &call_library_function_fn, 
+     //	       list(3, make_arg(fn), symbol(ELIPSIS), make_arg(args)), m);
+     */
 }    
 
 
@@ -662,49 +666,61 @@ void character_p_fn(machine *m){
 
 //------------------------------- FFI --------------------------------//
 
+/* #include <dlfcn.h> */
 
-/* char *to_c_string(closure *str); */
-
-/* closure *to_eight_string(char *str); */
-
-/* int fix_to_int(closure *num); */
-
-/* closure *int_to_fix(int num); */
-
-/* void load_lib_fn(machine *m){ */
+/* void load_library_fn(machine *m) */
+/* { */
 /*      closure *name = get_arg(name, m); */
-/*      char *rname = to_c_string(name); */
-/*      void *lib = dlopen(rname,RTLD_NOW|RTLD_GLOBAL); */
-/*      closure *ret = new(closure); */
-/*      ret->type = C_OBJECT; */
-/*      ret->value = lib; */
-/*      m->accum = ret; */
-/* } */
-
-/* void get_lib_object_fn(machine *m){ */
-/*      closure *lib = get_arg(lib, m); */
-/*      closure *name = get_arg(name, m); */
-/*      char *rname = to_c_string(name); */
-/*      void *obj = dlsym(rname, (lib->value)); */
-/*      closure *ret = new(closure); */
-/*      ret->type = C_OBJECT; */
-/*      ret->value = &obj; */
-/*      m->accum = ret; */
-/* } */
-
-/* void call_c_fn(machine *m){ */
-/*      closure *fn = get_arg(fn, m); */
-/*      closure *args = get_arg(args, m); */
-/*      int len = length(args); */
-/*      void * (*pooer)() = (fn->value); */
-/*      void *rret; */
-/*      switch (len) { */
-/*      case 0: rret = &(pooer()); */
+/*      wchar_t *rname = string_to_c_MALLOC(name); */
+/*      char *rrname = calloc(wcslen(rname), sizeof(char)); */
+/*      wcstombs(rrname, rname, wcslen(rname)); */
+/*      void *lib = dlopen(rrname,RTLD_LAZY); */
+/*      if (lib == NULL) { */
+/* 	 printf("Well, shit.\n"); */
+/* 	 fputs (dlerror(), stderr); */
 /*      } */
+/*      free(rname); */
+/*      free(rrname); */
 /*      closure *ret = new(closure); */
-/*      ret->type = C_OBJECT; */
-/*      ret->value = rret; */
+/*      ret->type = DREF; */
+/*      ret->in = new(doubleref); */
+/*      ret->in->type = C_OBJECT; */
+/*      ret->in->c_object = lib; */
+
 /*      m->accum = ret; */
+/* } */
+
+/* void load_library_object_fn(machine *m) */
+/* { */
+/*      closure *lib = get_arg(library, m); */
+/*      closure *name = get_arg(name, m); */
+
+/*      wchar_t *rname = string_to_c_MALLOC(name); */
+/*      char *rrname = calloc(wcslen(rname), sizeof(char)); */
+/*      wcstombs(rrname, rname, wcslen(rname)); */
+
+/*      void *obj = dlsym((lib->in->c_object), rrname); */
+/*      if (obj == NULL) { */
+/* 	 printf("Well, shit.\n"); */
+/* 	 fputs (dlerror(), stderr); */
+/*      } */
+/*      free(rname); */
+/*      free(rrname); */
+
+/*      closure *ret = new(closure); */
+/*      ret->type = DREF; */
+/*      ret->in = new(doubleref); */
+/*      ret->in->type = C_OBJECT; */
+/*      ret->in->c_object = obj; */
+/*      m->accum = ret; */
+/* } */
+
+/* void call_library_function_fn(machine *m) */
+/* { */
+/*     closure *fn = get_arg(fn, m); */
+/*     closure *args = get_arg(args, m); */
+/*     void * (*pooer)(machine *m, closure* args) = (fn->in->c_object); */
+/*     pooer(m, args); */
 /* } */
 
 //--------------------------------------------------------------------//
@@ -712,5 +728,11 @@ void character_p_fn(machine *m){
 
 
 #endif
+
+
+
+
+
+
  
 

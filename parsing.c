@@ -10,6 +10,9 @@
  EightLisp, by Sam Bleckley (diiq, stm31415@gmail.com)
 
 ***************************************************************************/
+#ifndef EIGHT_PARSE
+#define EIGHT_PARSE
+
 
 /*
 This is intended to be very simple, because it is only there to parse
@@ -190,3 +193,5 @@ void parse_comment(FILE *file, closure *accum)
 	c = fgetwc(file);
     }
 }
+
+#endif

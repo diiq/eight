@@ -11,6 +11,9 @@
 
 ***************************************************************************/
 
+#ifndef EIGHT_PRINT
+#define EIGHT_PRINT
+
 #include "eight.h"
 
 void print_closure(closure *a)
@@ -114,3 +117,4 @@ void print_string(closure *a)
 
 
 
+#endif
