@@ -17,7 +17,7 @@
 #include "eight.h"
 
 #define BLOCK_SIZE 1048576
-#define MIN_SIZE   5
+#define MIN_SIZE   2
 //----------------------------- STRUCTURES ----------------------------//
 
 /* A memory block is a big block of memory. Astonishing, right? Memory
@@ -84,7 +84,7 @@ memory *memory_b;
 
 // garbage_check is a threshold; when memory->a > garbage_check
 // then collection should happen.
-int garbage_check = 5;
+int garbage_check = 3;
 
 // the_nil is a constant reverence to () (there is only one nil)
 closure *the_nil;

@@ -64,18 +64,12 @@ wchar_t* string_to_c_MALLOC(closure *a){
     return name;
 }
 
-/* closure *string_to_number(closure *a){ */
-/*     if (!stringp(a)) */
-/* 	error(121, 121, "Oh man, I tried to convert a number from a non-string."); */
-/*     int l = length(a); */
-/*     int num = 0; */
-/*     int i; */
-/*     for(i=l; i>0; i--){ */
-/* 	num += (car(a)->in->num) * pow(10,i); */
-/* 	a = cdr(a); */
-/*     } */
-/*     return number(num); */
-
-/* } */
+closure *string_to_number(closure *a)
+{
+    wchar_t *ret = string_to_c_MALLOC(a);
+    long r = wcstol(ret, NULL, 10);
+    free(ret);
+    return number(r);
+}
 
 

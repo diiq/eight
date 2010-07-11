@@ -1,5 +1,5 @@
 /***************************************************************************
-                                 .ooooo.          
+                                .ooooo.          
                                 d88'   `8. 
                                 Y88..  .8' 
                                  `88888b.  
@@ -60,6 +60,10 @@ void intern_builtin_functions(machine *m)
 
     intern_fn(is, &is_fn, 
 	      list(2, make_arg(a), make_arg(b)), m);
+ 
+    internify(L"'", 
+	      &quote_fn, 
+	      list(1, make_arg(x)), m);
     
     intern_fn(oif, &oif_fn, 
 	      list(3, 
@@ -218,6 +222,12 @@ void set_fn(machine *m)
      }
 }
 
+void quote_fn(machine *m)
+{
+    closure *x = get_arg(x, m);
+    m->accum = enclose(x, m->current_frame, m->base_frame);
+    // TODO sanity check, is lonely cdr?
+}
 
 
 void is_fn(machine *m)
@@ -303,6 +313,7 @@ void print_fn(machine *m)
          print_closure(car(a));
        a = cdr(a);
      }
+     fflush(stdout);
 }
 
 void prmachine_fn(machine *m)

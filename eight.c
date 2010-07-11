@@ -22,10 +22,17 @@
 
 
 machine *init_8VM()
-
 {
-    machine *m =  init_memory();
-    frame *bframe = new_frame(NULL);
+    /* Init is a sort of a catch-all function for setting up the eight
+       virtual machine. It initializes the memory, sets up the first
+       stack-frame (the one that holds the global scope), inserts the
+       set of special symbols, and interns the built-in functions that
+       are at the heart of eight. */
+
+    machine *m =  init_memory(); // see memory.c
+
+    // The base frame is the only frame without a ->below
+    frame *bframe = new_frame(NULL); 
     m->current_frame = bframe;
     m->base_frame = bframe;
 
@@ -35,16 +42,23 @@ machine *init_8VM()
     insert_symbol(L",", COMMA);
     insert_symbol(L"...", ELIPSIS);
     insert_symbol(L"t", T);
-    insert_symbol(L"leaked-you-bastard", LEAKED);
+    insert_symbol(L"LEAKED", LEAKED);
     insert_symbol(L"function-name", FUNCTION_NAME);
 
+    // t represents true and  evaluates to itself.
     internal_set(symbol(T), symbol(T), bframe, bframe);
-    intern_builtin_functions(m);
+
+    intern_builtin_functions(m); // see basic_commands.c
+
     return m;
 }	
 
+
 closure *cleari()
 {
+    // clear is used when arguments are atpended; they have to pass
+    // through an evaulation step unaltered --- it's like quote used to
+    // be.
     closure *cleari = symbol(CLEAR); 
     cleari->in->type = INTERNAL;
     return cleari;
@@ -52,6 +66,9 @@ closure *cleari()
 
 closure *e_argument() 
 {
+    // e_argument is used when ... is encounted in a lambda list. It
+    // signals to the virtual machine that the current argument ought
+    // to be appended to the previous one.
     closure *e_argument = symbol(E_ARGUMENT); 
     e_argument->in->type = INTERNAL;
     return e_argument;
@@ -60,13 +77,14 @@ closure *e_argument()
 
 int nilp(closure *x)
 {
+    // Returns true is arg is nil.
     if(x->in->type == NIL) return 1;
     return 0;
 }
 
 closure *symbol(symbol_id id)
 {
-    // builds a symbol-closure from an id.
+    // Builds a symbol from an id.
     closure *sym = new(closure);
     sym->in = new(doubleref);
     sym->in->type = SYMBOL;
@@ -517,7 +535,9 @@ void print_info(machine *m)
 
 int virtual_machine_step(machine *m)
 {
+
     if(DEBUG) print_info(m);
+
     // If there's no next instruction on this frame, pop it. 
     // If there's no frame below this one, halt (return 1)
     if (m->current_frame->next == NULL){
@@ -619,7 +639,6 @@ int virtual_machine_step(machine *m)
 	    // are internal notes from the interpreter to itself. In this
 	    // case, it's APPLY, which starts the function application 
 	    // process once the function itself has been looked up.
-
 	    operation* fn=new(operation);
 	    operation* apply=new(operation);
 	    fn->type = CLOSURE_OP;

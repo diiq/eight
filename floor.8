@@ -1,8 +1,8 @@
 # Temporary signal handler.
 (base-signal-handler 
- (set-info (' ((q) (print q))) 
-	   (cons (cons (' function-name) 
-		       (cons (' stupid-signal-handler) ())) ())))
+ (set-info '((q) (print q)) 
+	   (cons (cons 'function-name 
+		       (cons 'stupid-signal-handler ())) ())))
 
 
 # unlambda, leak-all, and fn exist because of the fiddly nature of
@@ -14,68 +14,68 @@
 # ..., ', and optional arguments must be stripped. Unlambda does the
 # stripping.
 (set! unlambda 
-      (' ((list)
+      '((list)
 	  (oif list 
-	       (oif (is (car list) (' ...)) 
+	       (oif (is (car list) '...) 
 		    (unlambda (cdr list))
 		    (cons (oif (atom-p (car list)) 
 			       (car list) 
 			       (oif (atom-p (car (car list)))
-				    (oif (is (car (car list)) (' '))
+				    (oif (is (car (car list)) '')
 					 (car (cdr (car list)))
 					 (car (car list)))
-				    (oif (is (car (car (car list))) (' '))
+				    (oif (is (car (car (car list))) '')
 					 (car (cdr (car (car list))))
 					 (signal "Bad lambda list!"))))
 			  
-			  (unlambda (cdr list)))) ()))))
+			  (unlambda (cdr list)))) ())))
 
 # In order to avoid unsightly errors, all functions are given a
 # function-name. Without this, debugging is a pain, and with it, the
 # interpreter can verify that what it is applying is a function. Until
 # fn is written, the function-name must be added by hand.
-(set-info unlambda (cons (cons (' function-name) (cons (' unlambda) ())) ()))
+(set-info unlambda (cons (cons 'function-name (cons 'unlambda ())) ()))
 
 # Leak-all leaks a list of symbol from a closure. 'Leaking' just means
 # removing that symbol from the closing (more or less permanently).
-(set! leak-all (' ((list closure)
+(set! leak-all '((list closure)
 		 (oif list (leak-all (cdr list) 
-				     (leak (car list) closure)) closure))))
+				     (leak (car list) closure)) closure)))
 
-(set-info leak-all (cons (cons (' function-name) (cons (' leak-all) ())) ()))
+(set-info leak-all (cons (cons 'function-name (cons 'leak-all ())) ()))
 
 # Yay! It's fn, Eight's version of lambda. Note that the function-name
 # is built in.
-(set! fn (' (((' lambda-list) ... (' code))
+(set! fn '(('lambda-list ... 'code)
 	     (set-info (cons lambda-list 
 			     (leak-all (unlambda lambda-list) code))
-	    (cons (cons (' function-name) (cons (' anonymous-function) ())) ())))))
+	    (cons (cons 'function-name (cons 'anonymous-function ())) ()))))
 
-(set-info fn (cons (cons (' function-name) (cons (' fn) ())) ()))
+(set-info fn (cons (cons 'function-name (cons 'fn ())) ()))
 
 (set! string-p (fn (string) (oif string
 				 (oif (character-p (car string)) 
 				      (string-p (cdr string))
 				      ())
-				 (' t))))
+				 t)))
 
-(set-info string-p (cons (cons (' function-name) (cons (' string-p) ())) ()))
+(set-info string-p (cons (cons 'function-name (cons 'string-p ())) ()))
 
 # Aaand def. Where fn defines anonymous functions, def binds a
 # function to a name. TODO this should include an optional help string.
 
-(set! def (fn ((' name) (' lambda-list) ... (' code))
-              (set! (, name) 
-		    (set-info (fn (, lambda-list) (* (oif (string-p (car code))
-							  (cdr code) code)))	
-		      (cons (cons (' function-name) 
+(set! def (fn ('name 'lambda-list ... 'code)
+              (set! ,name 
+		    (set-info (fn ,lambda-list *(oif (string-p (car code))
+						     (cdr code) code))	
+		      (cons (cons 'function-name 
 					  (cons name ()))	      
 			    (oif (string-p (car code))
-				 (cons (cons (' help) 
+				 (cons (cons 'help 
 					     (cons (car code) ())) ())
 				 ()))))))
 
-(set-info def (cons (cons (' function-name) (cons (' def) ())) ()))
+(set-info def (cons (cons 'function-name (cons 'def ())) ()))
 
 
 (def no (x) 
@@ -114,16 +114,24 @@ returned list will set the value in the original rib."
      "format-scope takes an assoc list, and formats it as
         key -> value.
 " 
-     (oif (handle-signals (fn (a) (' t))
-                          (no (is (, (car (car scope))) (car (cdr (car scope))))))
-          (print " |      " (car (car scope)) " -> " (car (cdr (car scope))) newline))
+     (oif (handle-signals (fn (a) t)
+                          (no (is ,(car (car scope)) 
+				  (car (cdr (car scope))))))
+          (print " |      " 
+		 (car (car scope)) 
+		 " -> " 
+		 (car (cdr (car scope))) newline))
      (oif (cdr scope)
           (format-assoc (cdr scope))))
  
 
 (def format-stack-trace (trace)
-     (print " V" newline " " (car (assoc (' function-name) 
-                                (get-info (car (car trace))))) newline) 
+     (print " V"
+	    newline 
+	    " " 
+	    (car (assoc 'function-name 
+			(get-info (car (car trace))))) 
+	    newline) 
      (format-assoc (car (cdr (car trace))))
      (oif (cdr trace)
           (format-stack-trace (cdr trace))))
@@ -147,7 +155,7 @@ signals."
 # for the data. I like it this way though.
 
 (set-info base-signal-handler 
-          (cons (cons (' help) (cons "base-signal-handler sets the behavior of eight when it encounters an unhandled signal. The default is to print a stack trace, the signal poem/message, and then the first datum sent with the signal." ())) 
+          (cons (cons 'help (cons "base-signal-handler sets the behavior of eight when it encounters an unhandled signal. The default is to print a stack trace, the signal poem/message, and then the first datum sent with the signal." ())) 
                 (get-info base-signal-handler)))
 
 (base-signal-handler (fn (q) 
@@ -162,13 +170,13 @@ Oh my, I've found an unhandled signal! Here's what happened:
                                           newline)
                                    (print "
 
-
  Water does not know
  the wrong way
  water does not know
 
 
-I received a signal in an unconventional format. Try using the form (poem-message data):"
+I received a signal in an unconventional format. Try using the
+form (poem-message data):"
                                           q)) ()))
 
 # There! That's it for the nitty-gritty. Now it's a matter of writing
@@ -185,14 +193,14 @@ I received a signal in an unconventional format. Try using the form (poem-messag
      "Returns a true-value if x is a cons-pair, and () otherwise."
      (no (atom-p x)))
 
-(def or (arg ... (' args))
+(def or (arg ... 'args)
      "Performs logical or. Returns () if and only if all arguments
 evaluate to (). Or evaluates arguments in order, and stops when it
 reaches a non-() value.
 
 Or is particularly beautiful in Eight."
   (oif args
-      (oif arg arg (or (* args)))
+      (oif arg arg (or *args))
       arg))
 
 (def copylist (xs) 
@@ -224,7 +232,7 @@ after the lambda list:
 
  Good luck!"
      (print newline 
-            (car (assoc (' help) (get-info what-you-want-help-with))) 
+            (car (assoc 'help (get-info what-you-want-help-with))) 
             newline) ())
 
 
@@ -243,7 +251,7 @@ are you using Eight?"
 )) # Note that the $ is followed by a newline!
 # $ marks a literal character.
 
-(def open-paren-p (char) (is char $( ))
+(def open-paren-p (char) (is char $( )) #)<- unconfuses editors.
 
 (def close-paren-p (char) (is char $) ))
 
@@ -329,7 +337,7 @@ In this way, rest can be generalized for new data types."
      (inner-rest xs rest-table))
 
 
-(add-first-function (fn (xs) (' t)) (fn (xs) (signal (list "
+(add-first-function (fn (xs) t) (fn (xs) (signal (list "
 
 The ten thousand things unshatter
 the film of an explosion
@@ -339,28 +347,29 @@ error: I tried to take the first element of something I don't know how to take t
 
 (add-first-function (fn (xs) (cons-p xs)) (fn (xs) (car xs)))  
 
-(add-first-function (fn (xs) (is (car (assoc (' type)
+(add-first-function (fn (xs) (is (car (assoc 'type
 					     (get-info (car (cdr xs)))))
-				 (' stream)))
+				 'stream))
 		    (fn (xs) 
 			(set-cdr xs (list (read-character (car (cdr xs)))
 					  (car (cdr xs))))
 			(car xs)))
 				
 	      
-(add-rest-function (fn (xs) (' t)) (fn (xs) (signal (list "
+(add-rest-function (fn (xs) t) (fn (xs) (signal (list "
 
 a man akimbo
 suddenly pulls his fist to his breast
 as he quietly accumulates
 
-error: I tried to take the rest of something I don't know how to take the rest of:" xs))))
+error: I tried to take the rest of something I don't know how to take
+the rest of:" xs))))
 
 (add-rest-function (fn (xs) (cons-p xs)) (fn (xs) (cdr xs)))  
 
-(add-rest-function (fn (xs) (is (car (assoc (' type)
+(add-rest-function (fn (xs) (is (car (assoc 'type
 					     (get-info (car (cdr xs)))))
-				 (' stream)))
+				'stream))
 		   (fn (xs) 
 		       (set-cdr xs (list (read-character (car (cdr xs)))
 					 (car (cdr xs))))
@@ -370,7 +379,7 @@ error: I tried to take the rest of something I don't know how to take the rest o
 
 # Grand. From here on out, it should be first/rest/join not car/cdr/cons
 
-(def append (xs ys ... (' yss))
+(def append (xs ys ... 'yss)
      "append takes n lists and joins them. Calling
 
  (append '(1 2 3 4 5) '(6 7 8) '(9 10))
@@ -379,9 +388,9 @@ returns:
 
  (1 2 3 4 5 6 7 8 9 10) "
      (oif xs
-	  (join (first xs) (append (rest xs) ys (* yss)))
+	  (join (first xs) (append (rest xs) ys *yss))
 	  (oif yss
-	       (append ys (* yss))
+	       (append ys *yss)
 	       ys)))
 		
 (def pair (xs (f list))
@@ -406,11 +415,9 @@ returns
 # With is like the CL let. It uses an anomnymous function to
 # temporarily bind variables. It uses fewer parentheses, though.
 
-(def with ((' parms) ... (' body))
-     ((fn (, (map1 first (pair parms)))
-	  (* body))
-      (* (map1 (fn (x) (first (rest x))) (pair parms)))))
-
+(def with ('parms ... 'body)
+     ((fn ,(map1 first (pair parms)) *body)
+      *(map1 (fn (x) (first (rest x))) (pair parms))))
 
 (def reverse (xs)
      "reverse reverses the order of a list. Calling
@@ -424,206 +431,3 @@ Returns
 	  xs
 	  (append (reverse (rest xs)) (list (first xs)))))
 
-
-(def add-parse-state ((' name))
- 	   (set! (, (string-to-symbol 
-			(append (symbol-to-string name) 
-				"-parse-table"))) ()))
-
-(def add-parse-action ((' state) test action)
-     (with (table-name (string-to-symbol 
-			(append (symbol-to-string state) 
-				"-parse-table")))
-	   (set! (, table-name) (join (list test action) (, table-name)))))
-
-(def parse-inner (stream state accum table)
-     (oif ((first (first table)) stream)
-	  ((first (rest (first table))) stream accum)
-	  (parse-inner stream state accum (rest table))))
-
-(def parse (stream ((' state) null) (accum ())) ()
-     (parse-inner stream state accum 
-		  (, (string-to-symbol 
-		      (append (symbol-to-string state) 
-			      "-parse-table")))))
-
-	
-(def parse-file-end (stream)
-     (or (eof-p (first stream))
-	 (no stream)))
-
-(add-parse-state null)
-
-(add-parse-action null
-		  (fn (stream) (' t))
-		  (fn (stream accum) (parse stream symbol ())))
-
-(add-parse-action null
-		  parse-file-end
-		  (fn (stream accum) (list () stream)))
-
-(add-parse-action null
-		  (fn (stream) (whitespace-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) null ())))
-
-(add-parse-action null
-		  (fn (stream) (comment-character-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) comment ())))
-
-(add-parse-action null
-		  (fn (stream) (digit-p (first stream)))
-		  (fn (stream accum) (parse stream number ())))
-
-(add-parse-action null
-		  (fn (stream) (open-paren-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) list ())))
-
-(add-parse-action null
-		  (fn (stream) (open-paren-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) list ())))
-
-(add-parse-state comment)
-
-(add-parse-action comment
-		  (fn (stream) (' t))
-		  (fn (stream accum) (parse (rest stream) comment ())))
-
-(add-parse-action comment
-		  parse-file-end
-		  (fn (stream accum) (list () stream)))
-
-(add-parse-action comment
-		  (fn (stream) (newline-p (first stream)))
-		  (fn (stream accum) (list () (rest stream))))
-
-
-(add-parse-state symbol)
-(add-parse-action symbol
-		  (fn (stream) (' t))
-		  (fn (stream accum) (parse (rest stream) 
-					    symbol 
-					    (join (first stream) accum))))
-
-(add-parse-action symbol
-		  (fn (stream) (or (close-paren-p (first stream))
-				   (open-paren-p (first stream))))
-		      (fn (stream accum) (list 
-				      (oif accum
-					   (string-to-symbol (reverse accum)))
-				      stream)))
-
-
-(add-parse-action symbol
-		  (fn (stream) (parse-file-end stream))
-		  (fn (stream accum) (list 
-				      (oif accum
-					   (string-to-symbol (reverse accum)))
-				      stream)))
-
-(add-parse-action symbol
-		  (fn (stream) (whitespace-p (first stream)))
-		  (fn (stream accum) (list 
-				      (oif accum
-					   (string-to-symbol (reverse accum)))
-				      (rest stream))))
-
-(add-parse-state number)
-(add-parse-action number
-		  (fn (stream) (' t))
-		  (fn (stream accum) (parse stream symbol accum)))
-
-(add-parse-action number
-		  (fn (stream) (digit-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) 
-					    number 
-					    (join (first stream) accum))))
-(add-parse-action number
-		  (fn (stream) (close-paren-p (first stream)))
-		  (fn (stream accum) (list (string-to-number (reverse accum))
-					   stream)))
-
-(add-parse-action number
-		  (fn (stream) (or (whitespace-p (first stream))
-				   (eof-p (first stream))))
-		  (fn (stream accum) (list (string-to-number (reverse accum))
-					   (rest stream))))
-
-
-
-(add-parse-state list)
-(add-parse-action list
-		  (fn (stream) (' t))
-		  (fn (stream accum) (with (ret (parse stream symbol ()))
-					(parse (first (rest ret))
-					       list
-					       (join (first ret) accum)))))
-
-(add-parse-action list
-		  parse-file-end
-		  (fn (stream accum) (list (reverse accum) stream)))
-
-(add-parse-action list
-		  (fn (stream) (whitespace-p (first stream)))
-		  (fn (stream accum) (parse (rest stream) list accum)))
-
-(add-parse-action list
-		  (fn (stream) (comment-character-p (first stream)))
-		  (fn (stream accum) (parse (first (rest 
-						    (parse (rest stream) 
-							   comment 
-							   ())))
-					    list
-					    accum)))
-
-(add-parse-action list
-		  (fn (stream) (digit-p (first stream)))
-		  (fn (stream accum) (with (ret (parse stream number ()))
-					   (parse (first (rest ret))
-						  list
-						  (join (first ret) accum)))))
-						 
-(add-parse-action list
-		  (fn (stream) (open-paren-p (first stream)))
-		  (fn (stream accum) (with (ret (parse (rest stream) list ()))
-					   (parse (first (rest ret))
-						  list
-						  (join (first ret) accum)))))
-						 
-(add-parse-action list
-		  (fn (stream) (close-paren-p (first stream)))
-		  (fn (stream accum) (list (reverse accum) (rest stream))))
-
-
-
-# There are five parse states: null, symbol, comment, number, and list.
-
-
-(def parse-and-run (stream)
-     (with (ret (parse stream))
-	   (identity (, (first ret)))
-	   (first (rest ret))))
-
-(def parse-and-run-all (stream)
-     (with (stream (parse-and-run stream))
-	   (oif (no (parse-file-end stream))
-		(parse-and-run-all stream)
-		stream)))
-
-(def include (filename)
-     "Includes a file as if its contents were inserted at this point."
-     (close-file (parse-and-run-all (read-file filename))))
-     
-
-# Parsing the $ character flag:
-
-(add-parse-action null 
-		  (fn (stream) (is (first stream) $$))
-		  (fn (stream accum) (list (first (rest stream))
-					   (rest (rest stream)))))
-
-(add-parse-action list 
-		  (fn (stream) (is (first stream) $$))
-		  (fn (stream accum) (parse (rest (rest stream))
-					    list
-					    (join (first (rest stream)) accum))))
-   

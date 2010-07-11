@@ -9,45 +9,57 @@
                                       
  EightLisp, by Sam Bleckley (diiq, stm31415@gmail.com)
 
+
 ***************************************************************************/
 
 #ifndef EIGHT_HEADER
 #define EIGHT_HEADER
 
-#include <wchar.h>
+#include <wchar.h> 
+// trying to move towards good unicode support, but
+//I need people who *use* unicode support to give me feedback.
 
 
 #define new(x) (x *)allocate(sizeof(x))
-//#define new(x) (x *)calloc(1, sizeof(x));
 
 int DEBUG = 0;
-int GARBAGE_COLLECT = 1;
+int GARBAGE_COLLECT = 1; 
+// Garbage collection will NOT occur when this is 0.
 
 typedef struct closure_struct closure;
 typedef int symbol_id;
 typedef struct operation_struct operation;
 typedef struct frame_struct frame;
 
+
+// Every object that will need to be garbage collected needs a type-flag. 
 typedef enum  {
-    EMPTY, REFERENCE,// for garbage collecting
-    NIL, CONS_PAIR, NUMBER, INTERNAL, CHARACTER, SYMBOL, CONTINUATION, 
-    BUILTIN, C_OBJECT,  
-    DREF, 
-    MACHINE_FLAG, CLOSURE_OP, /// these are operation types
-    MACHINE, FRAME, CONS_CELL /// misc types
+    EMPTY, REFERENCE,   // These two are only used by the garbage collector,
+    NIL, CONS_PAIR, NUMBER, INTERNAL,// these are traditional eight objects,
+    CHARACTER, SYMBOL, CONTINUATION, 
+    BUILTIN, C_OBJECT,                // these hold references to c objects.
+    DREF,                 // All eight objects are wrapped by a DREF struct
+    MACHINE_FLAG, CLOSURE_OP,                  // these are operation types
+    MACHINE, FRAME, CONS_CELL                            // aaaand the rest.
 } obj_type;
 
+
+// Machine flags are used to tag operations for special treatment by
+// *the machine*. No one survives *the machine*. Handling these makes
+// up the second half of virtual_machine_step in eight.c. 
 typedef enum {
-    DO, 
-    APPLY,
+    APPLY, 
     CONTINUE_APPLY,
     ATPEND_APPLY,
     ARGUMENT, 
-    E_ARGUMENT, 
+    E_ARGUMENT,
+    DO, 
     SIGNAL, 
-    FUNCTION_NAME
 } machine_flag;
 
+
+// These are the core special symbols of eight; each of these has a
+// particular meaning hard-coded in to eight.
 typedef enum {
     ELIPSIS, 
     ASTERIX, 
@@ -56,10 +68,14 @@ typedef enum {
     ATPEND,
     LEAKED,
     T,
-    CLEAR
+    CLEAR,
+    FUNCTION_NAME
 } special; 
 
- 
+
+// An operation represents the next thing that should happen in a
+// given stack frame. It may be be a closure or a machine flag, or
+// both. Operations form singly-linked lists.
 struct operation_struct{
      obj_type type;
      machine_flag flag;
@@ -67,6 +83,13 @@ struct operation_struct{
      operation *next;
 };
 
+
+// A frame represents a set of instructions under a common variable
+// scope. The frame structure keeps track of a list of operations, a
+// scope (which is currently active), a rib (which accumulates
+// arguments for the next DO operation, a signal handler when
+// appropriate, and the function currently being applied. Frames form
+// linked lists.
 struct frame_struct {
     obj_type type;
     operation   *next; 
@@ -77,6 +100,9 @@ struct frame_struct {
     frame       *below;
 };
 
+// A machine contains a list of frames, the base (global) frame, and
+// an accumulator. The machine is also the root node of the whole
+// memory tree (see memory.c).
 typedef struct {
      obj_type type;
      frame *current_frame;
@@ -86,12 +112,20 @@ typedef struct {
 
 typedef void (* builtin) (machine*);
 
+
+// Cons cells simply pair up two closures. Having them in a separate
+// structure, one extra reference away from the dref struct, is important
+// to ensuring the closure algebra works properly.
 typedef struct {
      obj_type type;
      closure *car;
      closure *cdr;
 } cons_cell;
 
+// Here's the fancy thing itself! doubleref holds an info-object and a
+// useful thing --- a cons cell, a number, or whatever.
+// WARNING! This is a doubleref struct, but its type, as far as the
+// garbage collector is concerned is NOT DREF.
 typedef struct {
     obj_type type;
     closure *info;
@@ -107,12 +141,17 @@ typedef struct {
     };
 } doubleref;
 
+
+// closures are simply an extra wrapper around doubleref. Every
+// doubleref hides behind a closure object. This separation of closing
+// and object is necessary to the closure algebra.
+// WARNING! This is a closure struct, but its type, as far as the
+// garbage collector is concerned is DREF.
 struct closure_struct {
     obj_type   type;
     closure   *closing;
     doubleref *in;
 };
-
 
 
 //------------------------ MEMORY.C -----------------------//
@@ -254,6 +293,7 @@ closure *string(wchar_t * str);
 int stringp(closure* a);
 closure* character(wchar_t a);
 wchar_t* string_to_c_MALLOC(closure *a);
+closure *string_to_number(closure *a);
 
 //------------------------ PARSE.C -------------------------//
 
@@ -265,6 +305,7 @@ void new_basic_commands(machine *m);
 
 // basics
 void is_fn(machine *m);
+void quote_fn(machine *m);
 void oif_fn(machine *m);
 void cons_fn(machine *m);
 void car_fn(machine *m);

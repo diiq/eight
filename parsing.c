@@ -13,7 +13,7 @@
 
 /*
 This is intended to be very simple, because it is only there to parse
-unlambda, fn, def, and the full parser. No numbers or error-checking
+unlambda, fn, def, and the full parser. No error-checking
 is included.
  */
 
@@ -24,6 +24,7 @@ is included.
 closure *parse_list(FILE *file, closure *accum);
 closure *parse_string(FILE *file, closure *accum);
 closure *parse_symbol(FILE *file, closure *accum);
+closure *parse_number(FILE *file, closure *accum);
 closure *parse_null(FILE *file, closure *accum);
 closure *parse_character(FILE *file, closure *accum);
 void parse_comment(FILE *file, closure *accum);
@@ -42,7 +43,8 @@ closure *reverse(closure *a){
 
 closure *parse_file(FILE *file)
 {
-    return parse_null(file, nil());
+    closure *boo = parse_null(file, nil());
+    return boo;
 }
 
 closure *parse_null(FILE *file, closure *accum)
@@ -58,8 +60,46 @@ closure *parse_null(FILE *file, closure *accum)
 	return parse_null(file, accum);
     } else if(c == L'\"'){
 	return parse_string(file, nil());
+    } else if(c == L'\''){
+	wchar_t c = fgetwc(file);
+	if (!iswspace(c)){
+	    ungetwc(c, file);
+	    closure *boo = parse_null(file, nil());
+	    if (boo != NULL) return quote(boo);
+	}
+	return symbol(QUOTE);
+    } else if(c == L'@'){
+	wchar_t c = fgetwc(file);
+	if (!iswspace(c)){
+	    ungetwc(c, file);
+	    closure *boo = parse_null(file, nil());
+	    if (boo != NULL) return list(2, symbol(ATPEND), boo);
+	}
+	return symbol(ATPEND);
+    } else if(c == L','){
+	wchar_t c = fgetwc(file);
+	if (!iswspace(c)){
+	    ungetwc(c, file);
+	    closure *boo = parse_null(file, nil());
+	    if (boo != NULL) return list(2, symbol(COMMA), boo);
+	}
+	return symbol(COMMA);
+    } else if(c == L'*'){
+	wchar_t c = fgetwc(file);
+	if (!iswspace(c)){
+	    ungetwc(c, file);
+	    closure *boo = parse_null(file, nil());
+	    if (boo != NULL) return list(2, symbol(ASTERIX), boo);
+	}
+	return symbol(ASTERIX);
+    } else if(iswdigit(c)){
+	ungetwc(c, file);
+	return parse_number(file, nil());
     } else if(c == L'('){
 	return parse_list(file, nil());
+    } else if(c == L')'){
+	ungetwc(c, file);
+	return NULL;
     } else if(c == WEOF || c == EOF){
 	return NULL;
     } else {
@@ -90,6 +130,22 @@ closure *parse_symbol(FILE *file, closure *accum)
     }
 }
 
+closure *parse_number(FILE *file, closure *accum)
+{
+    wchar_t c = fgetwc(file);
+    if(iswdigit(c)){
+	return parse_number(file, cons(character(c), accum));
+    } else if(iswspace(c)) {
+	return string_to_number(reverse(accum));
+    } else if(c == L')') {
+	ungetwc(c, file); 
+	return string_to_number(reverse(accum));
+    } else {
+	ungetwc(c, file);
+	return parse_symbol(file, accum);
+    }
+}
+
 closure *parse_string(FILE *file, closure *accum)
 {
     //printf("parse str\n");
@@ -111,25 +167,18 @@ closure *parse_character(FILE *file, closure *accum)
 closure *parse_list(FILE *file, closure *accum)
 {
     //printf("parse list\n");
+    //print_closure(accum);
     wchar_t c = fgetwc(file);
-    if(iswspace(c)){
-	return parse_list(file, accum);
-    } else if(c == L'$'){
-	return parse_list(file, cons(parse_character(file, nil()), accum));
-    } else if(c == L'\"'){
-	return parse_list(file, cons(parse_string(file, nil()), accum));
-    }else if(c == L'('){
-	return parse_list(file, cons(parse_list(file, nil()), accum));
-    } else if(c == L'#'){
-	parse_comment(file, nil());
-	return parse_list(file, accum);
-    } else if(c == L')'){
+    if(c == L')'){
 	return reverse(accum);
     } else {
-	return parse_list(file, cons(
-				     parse_symbol(file,
-						  cons(character(c), nil())), 
-				     accum));
+	ungetwc(c, file); 
+	closure *boo = parse_null(file, nil());
+	if (boo != NULL){
+	    return parse_list(file, cons(boo, accum));
+	} else {
+	    return parse_list(file, accum);
+	}
     }
 }
 
