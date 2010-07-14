@@ -26,7 +26,7 @@
 #define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(L""#sym)), \
 				      m->current_frame, m->base_frame))     	
 	
-void internify(wchar_t *fn_name, void *fn_pointer, closure *lambda_list, machine *m)//, wchar_t *help_string)
+void internify(wchar_t *fn_name, void *fn_pointer, closure *lambda_list, machine *m, wchar_t *help_string)
 {
     closure *sym; closure *val;
     sym = new(closure);			
@@ -38,8 +38,11 @@ void internify(wchar_t *fn_name, void *fn_pointer, closure *lambda_list, machine
     sym->in->info = nil();				
     val = list(2, lambda_list, sym);			
     val->in->info =					
-      list(1, list(2, symbol(FUNCTION_NAME),		
-		   symbol(string_to_symbol_id(fn_name))));
+      list(2, 
+	   list(2, symbol(FUNCTION_NAME),		
+		symbol(string_to_symbol_id(fn_name))),
+	   list(2, symbol(HELP),
+		string(help_string)));
     internal_set(symbol(string_to_symbol_id(fn_name)),
 		 val,				
 		 m->current_frame,		
@@ -54,41 +57,45 @@ void intern_builtin_functions(machine *m)
     // TODO This is still more complicated than it should be.
 
     internify(L"is", &is_fn, 
-	      list(2, make_arg(a), make_arg(b)), m);
+	      list(2, make_arg(a), make_arg(b)), m,
+	      L"The function (is) tests for simple equality; it takes two arguments\nand returns t when those arguments are equal, or () when they are\nnot. Two things are equal if they are the same symbol, the same\nobject, or equal numbers. Lists with equal elements made at different\ntimes are NOT equal:\n\n(is 3 3)\nt\n(set! a '(1 2 3))\n(is a a)\nt\n(is a '(1 2 3))\n()\n\n");
  
     internify(L"'", 
 	      &quote_fn, 
-	      list(1, make_arg(x)), m);
+	      list(1, make_arg(x)), m, 
+	      L"The function ' takes one argument and returns that argument UNMODIFIED\nand UNEVALUATED, but with an associated closure --- so that if the\nreturn value is evaluated at any time in the future, it returns what\nit would have returned, had it been evaluated at the time of '-ing.");
     
     internify(L"oif", &oif_fn, 
 	      list(3, 
 		   make_arg(test),
 		   quote(make_arg(then)),
 		   quote(make_arg(elser))), 
-	      m); 
+	      m,
+	      L"oif is a simple conditional. It takes a test and two statements:\n\n(if (is 3 3)\n    (print \"Yes!\")\n    (print \"no...\"))\nYes!\n\nIf the test, when evaluated, returns (), then the second statement is\nevaluated --- here, that would be (print \"no...\"). If, as is the\ncase here, test returns anything BUT (), then the first statement is\nevaluated: (print \"Yes!\")"); 
     
     internify(L"cons", &cons_fn, 
 	      list(2, make_arg(car), make_arg(cdr)), 
-	       m);
+	      m, L"cons takes two arguments and builds a cons-pair from them. Please do\nnot use cons; use join whenever possible. Please ALWAYS ensure that\nthe result of using cons is a 'proper list' --- that is, one that ends\nwith a (). You can tell if your list is a proper list by calling\n(print list); if a . appears anywhere in your structure, you've used\ncons innapropriately. Jerk.");
     
-    internify(L"car", &car_fn, list(1, make_arg(cons)), m);
+    internify(L"car", &car_fn, list(1, make_arg(cons)), m, L"The function car is a low-level way of retrieving the first element of\na list. Please use (first) instead. Car should be used only when speed\nis of the essence --- when I can also reccomend using something other\nthan Eight.");
     
-    internify(L"cdr", &cdr_fn, list(1, make_arg(cons)), m);
+    internify(L"cdr", &cdr_fn, list(1, make_arg(cons)), m, L"The function car is a low-level way of retrieving all but the first element of\na list. Please use (rest) instead. cdr should be used only when you wish to be speedy. \nYou're reading this. So you don't.");
     
-    internify(L",", &comma_fn, list(1, make_arg(closure)), m);
+    internify(L",", &comma_fn, list(1, make_arg(closure)), m, L", is a function that takes one argument and evaluates it.\n\n(, '(plus 2 3))\n5\n\nThink of it as the inverse of '. See (help ').");
     
     internify(L"call/cc", &callcc_fn, 
 	      list(1, quote(make_arg(fn))), 
-	      m);
+	      m, L"Woah boy. Call with current continuation is hard. So here's a\nwikipedia article instead:\nhttp://en.wikipedia.org/wiki/Call-with-current-continuation");
     
     
     
     
-    internify(L"atom-p", &atomp_fn, list(1, make_arg(a)), m);
+    internify(L"atom-p", &atomp_fn, list(1, make_arg(a)), m,
+	      L"atom-p takes one argument and returns t if that argument is not a list, and () otherwise.");
     
     internify(L"leak", &leak_fn, 
 	      list(2, make_arg(sym), make_arg(closure)), 
-	      m);
+	      m, L"BANANA BANANA BANANA leak is hard to explain. Please yell at me so that I write copy on this. \n\ndiiq is too silly\nto write documentation\npotato salad.\n\n");
     
     
     
@@ -96,116 +103,117 @@ void intern_builtin_functions(machine *m)
 
     internify(L"set!", &set_fn, 
 	      list(2, quote(make_arg(a)), make_arg(b)), 
-	      m);
+	      m, L"set! takes two arguments; the first is a symbol, and is NOT evaluated;\nthe second argument is evaluated. The symbol is bound to that value.\n\n(set! a 5)\n5\na\n5\n");
     
     internify(L"set-car", &set_car_fn, 
 	      list(2, make_arg(cons), make_arg(value)), 
-	      m);
+	      m, L"set-car takes two arguments; a list, and a statement. The first\nelement of the list is set to the value of the statement.");
     
     internify(L"set-cdr", &set_cdr_fn, 
 	      list(2, make_arg(cons), make_arg(value)), 
-	      m);
+	      m, L"set-car takes two arguments; a list, and a statement. All but the first element of the list is set to the value of the statement.");
     
     
     
     
     
-    internify(L"signal", &signal_fn, list(1, make_arg(sig)), m);
+    internify(L"signal", &signal_fn, list(1, make_arg(sig)), m, L"Signal takes one argument. It builds a signal which is a list; the first element of the list is a continuation [see (help call/cc)] and the second element is whatever you passed to (signal). That whole package is then passed to the nearest signal-handler. See (help handle-signals), (help unhandle-signal), and (help base-signal-handler).");
      
     internify(L"handle-signals", &add_handler, 
-	      list(2,
+	      list(3,
 		   quote(make_arg(handler)),  
+		   symbol(ELIPSIS), 
 		   quote(make_arg(body))), 
-	      m);
+	      m, L"handle-signals takes many arguments. The first argument is a unary function; the rest are code. If the code throws a signal, that signal will be handed to the function. See (help signal), (help unhandle-signal), and (help base-signal-handler).");
      
     internify(L"unhandle-signal", &unhandle_signal, 
 	      list(1, make_arg(sig)), 
-	      m);
+	      m, L"See (help signal), (help handle-signals), and (help base-signal-handler).");
      
     internify(L"base-signal-handler", &base_handler, 
 	      list(1, quote(make_arg(handler))), 
-	      m);
+	      m, L"See (help signal), (help handle-signals), and (help unhandle-signal).");
 
 
 
 
 
-    internify(L"closing-of", &closing_of_fn, list(1, make_arg(a)), m);
+    internify(L"closing-of", &closing_of_fn, list(1, make_arg(a)), m, L"");
 
     internify(L"set-info", &set_info_fn, 
 	      list(2, make_arg(a), make_arg(info)), 
-	      m);
+	      m, L"");
 
-    internify(L"get-info", &get_info_fn, list(1, make_arg(a)), m);
-
-
+    internify(L"get-info", &get_info_fn, list(1, make_arg(a)), m, L"");
 
 
-    internify(L"print", &print_fn, list(2, symbol(ELIPSIS), make_arg(a)), m);
+
+
+    internify(L"print", &print_fn, list(2, symbol(ELIPSIS), make_arg(a)), m, L"");
      
-    internify(L"prmachine", &prmachine_fn, nil(), m);
+    internify(L"prmachine", &prmachine_fn, nil(), m, L"");
      
-    internify(L"start-debug", &start_debug_fn, nil(), m);
+    internify(L"start-debug", &start_debug_fn, nil(), m, L"");
 
     internify(L"stack-trace", 
 	      &stack_trace_fn, 
-	      list(1, make_arg(continuation)), m);
+	      list(1, make_arg(continuation)), m, L"");
 
      
-    internify(L"read-file", &read_file_fn, list(1, make_arg(filename)), m);
+    internify(L"read-file", &read_file_fn, list(1, make_arg(filename)), m, L"");
 
-    internify(L"close-file", &close_file_fn, list(1, make_arg(handle)), m);
+    internify(L"close-file", &close_file_fn, list(1, make_arg(handle)), m, L"");
 
-    internify(L"read-character", &read_char_fn, list(1, make_arg(handle)), m);
-
-
+    internify(L"read-character", &read_char_fn, list(1, make_arg(handle)), m, L"");
 
 
-    internify(L"whitespace-p", &whitespacep_fn, list(1, make_arg(char)), m);
 
-    internify(L"eof-p", &eof_p_fn, list(1, make_arg(char)), m);
+
+    internify(L"whitespace-p", &whitespacep_fn, list(1, make_arg(char)), m, L"");
+
+    internify(L"eof-p", &eof_p_fn, list(1, make_arg(char)), m, L"");
 
     internify(L"string-to-symbol", &string_to_symbol_fn, 
 	      list(1, make_arg(string)), 
-	      m);
+	      m, L"");
 
     internify(L"symbol-to-string", &symbol_to_string_fn, 
 	      list(1, make_arg(sym)), 
-	      m);
+	      m, L"");
      
     internify(L"string-to-number", &string_to_number_fn, 
 	      list(1, make_arg(string)), 
-	      m);
+	      m, L"");
 
     internify(L"character-p", &character_p_fn, 
 	      list(1, make_arg(character)), 
-	      m);
+	      m, L"");
 
 
 
 
-     internify(L"plus", &plus_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L"plus", &plus_fn, list(2, make_arg(a), make_arg(b)), m, L"");
 
-     internify(L"minus", &minus_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L"minus", &minus_fn, list(2, make_arg(a), make_arg(b)), m, L"");
 
-     internify(L"multiply", &multiply_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L"multiply", &multiply_fn, list(2, make_arg(a), make_arg(b)), m, L"");
 
-     internify(L"divide", &divide_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L"divide", &divide_fn, list(2, make_arg(a), make_arg(b)), m, L"");
 
-     internify(L">", &greater_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L">", &greater_fn, list(2, make_arg(a), make_arg(b)), m, L"");
 
-     internify(L"<", &less_fn, list(2, make_arg(a), make_arg(b)), m);
+     internify(L"<", &less_fn, list(2, make_arg(a), make_arg(b)), m, L"");
 
      /*
-     internify(L"load-library", &load_library_fn, list(1, make_arg(name)), m);
+     internify(L"load-library", &load_library_fn, list(1, make_arg(name)), m, L"");
 
      internify(L"load-library-object", 
 	       &load_library_object_fn, 
-	       list(2, make_arg(name), make_arg(library)), m);
+	       list(2, make_arg(name), make_arg(library)), m, L"");
 
      //     internify(L"call-library-function", 
      //	       &call_library_function_fn, 
-     //	       list(3, make_arg(fn), symbol(ELIPSIS), make_arg(args)), m);
+     //	       list(3, make_arg(fn), symbol(ELIPSIS), make_arg(args)), m, L"");
      */
 }    
 

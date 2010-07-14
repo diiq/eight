@@ -70,6 +70,7 @@ typedef enum {
     QUOTE,
     ATPEND,
     LEAKED,
+    HELP,
     T,
     CLEAR,
     FUNCTION_NAME

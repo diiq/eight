@@ -43,6 +43,7 @@ machine *init_8VM()
     insert_symbol(L"...", ELIPSIS);
     insert_symbol(L"t", T);
     insert_symbol(L"LEAKED", LEAKED);
+    insert_symbol(L"help", HELP);
     insert_symbol(L"function-name", FUNCTION_NAME);
 
     // t represents true and  evaluates to itself.
