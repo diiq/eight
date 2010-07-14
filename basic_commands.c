@@ -23,8 +23,10 @@
 
 #define make_arg(sym) symbol(string_to_symbol_id(L""#sym))
 
+#define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(L""#sym)), \
+				      m->current_frame, m->base_frame))     	
 	
-void internify(wchar_t *fn_name, void *fn_pointer, closure *lambda_list, machine *m)
+void internify(wchar_t *fn_name, void *fn_pointer, closure *lambda_list, machine *m)//, wchar_t *help_string)
 {
     closure *sym; closure *val;
     sym = new(closure);			
@@ -351,9 +353,13 @@ closure *build_stack_trace(frame *f)
 
 closure *frame_trace(frame *f)
 {
-    if (!nilp(f->function)){
-	return list(2, f->function, f->rib);
-    } 
+    //    if (!nilp(f->function)){
+    if (f->next){
+	return list(4, f->function, f->rib, f->scope, f->next->closure);
+    }	else {
+	return list(4, f->function, f->rib, f->scope, nil());
+    }	
+	//} 
     return nil();
 }
 
@@ -434,6 +440,8 @@ void toss_signal(closure* sig, machine* m)
      frame *fm = find_signal_handler(m->current_frame);
      if (fm == NULL) {
 	  printf("No handler.\n");
+	  print_closure(sig);
+	  print_info(m);
 	  m->current_frame = m->base_frame;
 	  m->accum = sig; //cdr(car(cdr(sig)));
 	  return;

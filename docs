@@ -4,7 +4,8 @@ Eight is pretty easy to learn. Here is how it works. There are some basic types:
 Symbols: build-spit, ham, cow-or-not, labia!, +, and others.
 
 Symbols are represented by a word (dashes, exclamation points, and question marks are fine --- but don't use spaces, apostrophes, commas, asterices, or ampersands!).
-Symbols are bound to other objects --- like a variable in other languages:
+
+Symbols can be bound to other objects --- like a variable in other languages:
 -> (set! one-hand 5)
 5
 -> one-hand

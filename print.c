@@ -78,6 +78,8 @@ void print_cont(operation *ins)
 
 void print_frame(frame *fm)
 {
+  printf("\nfn: ");
+  print_closure(fm->function);
   printf("\nnext: ");
   print_cont(fm->next);
   printf("\nscope: ");
@@ -92,11 +94,13 @@ void print_machine(machine *m){
 
 void print_stack(frame *fm)
 {
-  if (fm != NULL){
-    print_frame(fm);
-    printf("\n^_________________^");
-    print_stack(fm->below);
-  }
+    if (fm != NULL){
+	if (fm->below == NULL)
+	    printf("BASE FRAME:\n");
+	print_frame(fm);
+	printf("\n^_________________^");
+	print_stack(fm->below);
+    }
 }
       
 void print_string_internal(closure *a)

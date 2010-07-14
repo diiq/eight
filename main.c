@@ -60,12 +60,14 @@ int main( int   argc,
 	    if(!strcmp(argv[i], "-i")){
 		interact_parse(m);
 	    } else {
-		rep = parse_file(fopen(argv[i], "r"));
+		file = fopen(argv[i], "r");
+		rep = parse_file(file);
 		while (rep != NULL){
 		    m = eval(rep, m);
 		    rep = parse_file(file);
 		}
 	    }
+	    fclose(file);
 	}
     }
     return 0; 

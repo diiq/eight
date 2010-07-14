@@ -120,12 +120,6 @@ closure *quote(closure *x)
     return cheap_cons(q, cons(x, nil()));
 };
 
-closure *e_arg()
-{
-    closure *a = symbol(E_ARGUMENT);
-    a->in->type = INTERNAL;
-    return a;
-}
 
 int equal(closure *a, closure *b)
 {
@@ -153,13 +147,13 @@ closure *looker_up(closure *sym, frame *current_frame, frame *base_frame)
     // what is returned; by setting the car of
     // what is returned, you can alter the value
     // destructively.
-    closure *local = lassoc(sym, sym->closing);
-    if (nilp(local)) 
-	local = lassoc(sym, current_frame->scope);
+    //closure *local = lassoc(sym, sym->closing);
+    //if (nilp(local)) 
+    closure *local = lassoc(sym, current_frame->scope);
     if (nilp(local))
 	local = lassoc(sym, base_frame->scope);
-    else if (leakedp(local))
-	local = looker_up(sym, current_frame->below, base_frame);
+    //  else if (leakedp(local))
+    //	local = looker_up(sym, current_frame->below, base_frame);
     //print_closure(local);printf("\n");
     return local;
 };
@@ -533,6 +527,31 @@ void print_info(machine *m)
 }
 
 
+frame *tail_call_optimize(machine *m)
+{
+    frame* n_frame;
+    closure *ascope = m->current_frame->scope;
+    closure *arib = m->current_frame->rib;
+    closure *ahandler = m->current_frame->signal_handler;
+    if ((m->current_frame->next == NULL) &&
+	(m->current_frame->signal_handler == NULL) &&
+    	(m->current_frame != m->base_frame)){
+    	while ((m->current_frame->below->next == NULL) &&
+	       (m->current_frame->below->signal_handler == NULL) &&
+    	       (m->current_frame->below != m->base_frame)){
+    	    m->current_frame = m->current_frame->below;
+	}
+    	n_frame = m->current_frame;
+	n_frame->signal_handler = ahandler;
+    } else {
+ 	n_frame = new_frame(m->current_frame);
+    }
+    n_frame->rib = arib;
+    n_frame->scope = ascope;
+    m->current_frame = n_frame;
+    return n_frame;
+}
+
 int virtual_machine_step(machine *m)
 {
 
@@ -595,18 +614,18 @@ int virtual_machine_step(machine *m)
 	    // and then try again.
 
 	    // new frame, as if a function application
-	    m->current_frame = new_frame(m->current_frame);
+	    tail_call_optimize(m);
 
 	    closure* sub = copy_closure(instruction->closure);
 	    sub->closing = nil();
 	    operation* cl = new(operation);
 	    cl->type = CLOSURE_OP;
 	    cl->closure = sub;
-
+	    
 	    m->current_frame->next = cl;
 	    m->current_frame->scope = 
 		cheap_append(instruction->closure->closing,
-			     m->current_frame->below->scope);
+			     m->current_frame->scope);
 
 	} else if (instruction->closure->in->type != CONS_PAIR){
 	    // This test is maybe a little dangerous, because it's a
@@ -670,23 +689,12 @@ int virtual_machine_step(machine *m)
 		closure *sig = build_signal(cons(string(L"\n\n\nI am one of the ten thousand things\nbut I cannot forget that I am also an I\nso I hope and act and dream instead\n\n\nI attempted to treat something as a function, but it wasn't:"), cons(m->accum, nil())), m);
 		toss_signal(sig, m);
 	    } else {
-		frame* n_frame;
-		if ((m->current_frame->next == NULL) && 
-		    (m->current_frame != m->base_frame)){
-		    n_frame = m->current_frame;
-		} else {
-		    n_frame = new_frame(m->current_frame);
-		}
-		n_frame->rib = m->accum->closing;
-		n_frame->scope = m->current_frame->scope;
-
+		frame *n_frame = tail_call_optimize(m);
 		n_frame->function = m->accum;
-
 		operation* fn=new(operation);
 		fn->type = MACHINE_FLAG;
 		fn->flag = DO; 
 		fn->closure = m->accum;
-		m->current_frame = n_frame;
 		operation* chain=build_argument_chain(fn_lambda_list(m->accum),
 						      instruction->closure,
 						      fn);
@@ -759,7 +767,6 @@ int virtual_machine_step(machine *m)
 	    m->current_frame->next = fn->next;
 
 	} else if (instruction->flag == DO){
-
 	    operation* ins = fn_instructions(instruction->closure);
 	    m->current_frame->next = ins;
 	    m->current_frame->scope = m->current_frame->rib;

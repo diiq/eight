@@ -18,3 +18,35 @@ Strings. Comments.
 
 So I need a newline test, a whitespace test, alpha, num, and char equality.
 
+ISSUES TO ADD (7/12)
+
+Stack trace is less informative with string TCO. What do?
+Looker-up is MUCH slower with strong TCO. Intuition is that scopes are bigger.
+
+
+missing from test.8 is coverage for:
+atpend
+empty elipsis args
+stacked disposable frames (of course not!)
+
+
+quote as fn
+prmachine
+
+stack trace
+closing-of
+maths
+
+chars
+read-file
+set-car
+set-cdr
+
+string-to-symbol
+
+string
+
+
+
+Thoughts: can we take on a killer whale and eat its heart?
+Can we save the core having created it once? Reading a heap back in but on an offset? Hmmm. I am not totally comfortable with this; fixing the pointers seems like it would be a bit goofy. 

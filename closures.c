@@ -195,24 +195,6 @@ closure *cdr(closure *x)
 }
 
 
-closure *cheap_list(int num, ...)
-{
-    va_list lis;
-    closure *rlis[num];
-    closure *ret = nil();
-    int i = 0;
-
-    va_start ( lis, num );
-    for(i=0; i<num; i++){
-	rlis[i] = va_arg ( lis, closure* );
-    }
-   
-    for(i=num-1; i>=0; i--){
-	ret = cheap_cons(rlis[i], ret);
-    }
-    return ret;
-}
-
 closure *list(int num, ...)
 {
     va_list lis;
@@ -246,25 +228,26 @@ closure *cheap_acons(closure *sym, closure *val, closure *closing)
 
 closure *lassoc(closure *sym, closure* closing)
 {
-     if (nilp(closing)) {
-	  return nil();
+    while(!nilp(closing)) {
+	if ((sym->in->symbol_id == 
+	     cheap_car(cheap_car(closing))->in->symbol_id) &&
+	    !leakedp(cheap_cdr(cheap_car(closing)))) {
+	 return cheap_cdr(cheap_car(closing));
      }
-     if (equal(sym, cheap_car(cheap_car(closing))) &&
-	 !leakedp(cheap_cdr(cheap_car(closing)))) {
-	  return cheap_cdr(cheap_car(closing));
-     }
-     return assoc(sym, cheap_cdr(closing));
+     closing = cheap_cdr(closing);
+    }
+    return nil();
 };
 
 closure *assoc(closure *sym, closure* closing)
 {
-     if (nilp(closing)) {
-	  return nil();
-     }
-     if (equal(sym, cheap_car(cheap_car(closing)))) {
-	  return cheap_cdr(cheap_car(closing));
-     }
-     return assoc(sym, cheap_cdr(closing));
+    while (!nilp(closing)) {
+	if (equal(sym, cheap_car(cheap_car(closing)))) {
+	    return cheap_cdr(cheap_car(closing));
+	}
+	closing = cheap_cdr(closing);
+    }
+    return nil();
 };
 
 closure *cheap_append(closure *a, closure *b)
@@ -287,12 +270,12 @@ closure *append(closure *a, closure *b)
      }
 };
 
-closure *last(closure *alist)
+closure *last(closure *x)
 {
-    if (alist->in->type != CONS_PAIR)
-	return alist;
-    if (nilp(cdr(alist)))
-	return car(alist);
-    return last(cdr(alist));
+    while(!nilp(cdr(x))){
+	x = cdr(x);
+    }
+    return car(x);
 }
+
 #endif

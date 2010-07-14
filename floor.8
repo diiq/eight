@@ -1,8 +1,6 @@
-# Temporary signal handler.
-(base-signal-handler 
- (set-info '((q) (print q)) 
-	   (cons (cons 'function-name 
-		       (cons 'stupid-signal-handler ())) ())))
+(set! sup (set-info '((q) (oif (is q 1) poo (sup (minus q 1)))) 
+ 	   (cons (cons 'function-name 
+ 		       (cons 'sup ())))))
 
 
 # unlambda, leak-all, and fn exist because of the fiddly nature of
@@ -157,7 +155,7 @@ signals."
 (set-info base-signal-handler 
           (cons (cons 'help (cons "base-signal-handler sets the behavior of eight when it encounters an unhandled signal. The default is to print a stack trace, the signal poem/message, and then the first datum sent with the signal." ())) 
                 (get-info base-signal-handler)))
-
+ 
 (base-signal-handler (fn (q) 
 			 (print "
 

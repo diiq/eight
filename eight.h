@@ -25,8 +25,6 @@
 
 #define new(x) (x *)allocate(sizeof(x))
 
-#define get_arg(sym, m) car(looker_up(symbol(string_to_symbol_id(L""#sym)), \
-				      m->current_frame, m->base_frame))     	
 int DEBUG = 0;
 int GARBAGE_COLLECT = 1; 
 // Garbage collection will NOT occur when this is 0.

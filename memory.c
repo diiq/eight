@@ -288,15 +288,15 @@ int mysizeof(void *typed)
 	 type == BUILTIN   || 
 	 type == C_OBJECT){
 	  return sizeof(doubleref);
+     } else if (type == CONS_CELL) {
+	 return sizeof(cons_cell); 
      } else if (type == MACHINE_FLAG ||
 		type == CLOSURE_OP){
-	  return sizeof(operation);
+	 return sizeof(operation);
      } else if (type == MACHINE) {
 	  return sizeof(machine);
      } else if (type == FRAME) {
 	  return sizeof(frame);
-     } else if (type == CONS_CELL) {
-	  return sizeof(cons_cell);
      } else if (type == REFERENCE) {
 	  return ((memory_reference*)typed)->size;
      }
@@ -345,9 +345,7 @@ void free_memory(memory *a)
 
 void collectify()
 {
-     if (memory_b->from->offset == -1)
-	  return;
-     
+    while (memory_b->from->offset != -1){
      void *location = from_location(memory_b);
      obj_type type = *(obj_type*)(location);
      //     print_heap(memory_b);
@@ -414,7 +412,7 @@ void collectify()
 	  return;
      }
      next_reference(memory_b);
-     collectify();
+    }
 }
 
 void print_type(obj_type type)
@@ -446,31 +444,26 @@ void print_type(obj_type type)
      }
 }
 
-void print_heapi(memory *a)
-{
-     if (a->from->offset == -1) {	 
-	  printf("end of heap\n");
-	  return;
-     }
-     obj_type type = *(obj_type*)from_location(a);
-     print_type(type);
-     if (type == NUMBER){
-	  print_closure(from_location(a));
-     }
-     printf(" ");
-     next_reference(a);
-     print_heapi(a);
-}
-
 void print_heap(memory *a){
     memory_block *from = a->from->block;
     int fromoff = a->from->offset;
-     a->from->block = a->first;
-     a->from->offset = 0;
-     printf("start of heap\n");
-     print_heapi(a);
-     a->from->block = from;
-     a->from->offset = fromoff;
+    a->from->block = a->first;
+    a->from->offset = 0;
+    printf("start of heap\n");
+     
+    while (a->from->offset != -1) {	 
+	obj_type type = *(obj_type*)from_location(a);
+	print_type(type);
+	if (type == NUMBER){
+	    print_closure(from_location(a));
+	}
+	printf(" ");
+	next_reference(a);
+    }
+
+    printf("end of heap\n");
+    a->from->block = from;
+    a->from->offset = fromoff;
 
 }
 

@@ -1,30 +1,60 @@
-## (set! 2 (' 2))
-## (set! 3 (' 3))
-## (set! 4 (' 4))
-## (set! 5 (' 5))
-## (set! 25 (' 25))
-## (set! 6 (' 6))
+# TESTS! This file give essentially complete coverage of eight.c, closures.c
+# MISSING from this test set are:
+# quote (the basic command, not the machine operator)
+# prmachine
+#
+# stack trace
+# closing-of
+# math fns: < > plus minus multiply divide
+#
+# char fns: whitespace-p, etc.
+# read-file
+# set-car
+# set-cdr
+#
+# string-to-symbol
+#
+# string
+#
+# Otherwise we have complete coverage.
+
+# cons, car, and cdr 
 (print (is (car (cons 2 3)) 2))
 (print (is (car ((fn (b) (cons 2 b)) 3)) 2))
 (print (is (cdr ((fn (b) (cons 2 b)) 3)) 3))
 (print (is (cdr (((fn (b) (fn (a) (cons a b))) 3) 2)) 3))
+
+# Scopes and leaking
 (print (is (set! a 5) 5))
 (print (is ((fn ((' b)) b) a) (' a)))
 (print (is ((fn ((' b)) b) (, a)) 5))
 (print (is (is ((fn (a) a) 25) 5) ()))
 (print (is ((leak (' a) (fn (a) a)) 25) 25))
+
+#oif
 (print (is (oif (' a) 3 2) 3))
 (print (is (oif () 3 2) 2))
+
+# elipsis args
 (print (is (car ((fn (... b) b) 3 2 3)) 3))
 (print (is (car ((fn (... (' b)) b) c a 2 q)) (' c)))
 (print (is (car (car ((fn (... (' b)) b) (, (cons (' c) (cons (' a) ())))))) (' c)))
+
+# asterpend and atpend
+(print (is (car ((fn (... b) b) *'((plus 3 4) 2 3))) 7))
+(print (is (car ((fn (... b) b) @'(plus 3 4))) 'plus))
+
+# Optional arguments
+(print (is ((fn ((b 5)) b)) 5))
+(print (is ((fn ((b 5)) b) 4) 4))
 (print (is (call/cc (fn (f) (f 5) 4)) 5))
 (print (is (handle-signals (fn (q) ((car q) 6)) (signal 5)) 6))
 (print (is (handle-signals (fn (q) (car (cdr q))) (signal 5)) 5))
 (print (is (handle-signals (fn (q) 4) (signal 5)) 4))
 (print (is (handle-signals 
 	    (fn (p) (car (cdr p)))
-	    (handle-signals (fn (q) (unhandle-signal q)) (signal 5)))
+	    (handle-signals (fn (q) 
+				(unhandle-signal q)) (signal 5)))
  	   5))
 
 
