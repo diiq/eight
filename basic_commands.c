@@ -120,11 +120,11 @@ void intern_builtin_functions(machine *m)
     internify(L"signal", &signal_fn, list(1, make_arg(sig)), m, L"Signal takes one argument. It builds a signal which is a list; the first element of the list is a continuation [see (help call/cc)] and the second element is whatever you passed to (signal). That whole package is then passed to the nearest signal-handler. See (help handle-signals), (help unhandle-signal), and (help base-signal-handler).");
      
     internify(L"handle-signals", &add_handler, 
-	      list(3,
+	      list(2,
 		   quote(make_arg(handler)),  
-		   symbol(ELIPSIS), 
+		   //		   symbol(ELIPSIS), 
 		   quote(make_arg(body))), 
-	      m, L"handle-signals takes many arguments. The first argument is a unary function; the rest are code. If the code throws a signal, that signal will be handed to the function. See (help signal), (help unhandle-signal), and (help base-signal-handler).");
+	      m, L"handle-signals takes two arguments. The first argument is a unary function; the second is code. If the code throws a signal, that signal will be handed to the function. See (help signal), (help unhandle-signal), and (help base-signal-handler).");
      
     internify(L"unhandle-signal", &unhandle_signal, 
 	      list(1, make_arg(sig)), 
