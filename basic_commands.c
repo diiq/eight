@@ -71,7 +71,7 @@ void intern_builtin_functions(machine *m)
 		   quote(make_arg(then)),
 		   quote(make_arg(elser))), 
 	      m,
-	      L"oif is a simple conditional. It takes a test and two statements:\n\n(if (is 3 3)\n    (print \"Yes!\")\n    (print \"no...\"))\nYes!\n\nIf the test, when evaluated, returns (), then the second statement is\nevaluated --- here, that would be (print \"no...\"). If, as is the\ncase here, test returns anything BUT (), then the first statement is\nevaluated: (print \"Yes!\")"); 
+	      L"oif is a simple conditional. It takes a test and two statements:\n\n->(if (is 3 3)\n    (print \"Yes!\")\n    (print \"no...\"))\nYes!\n\nIf the test, when evaluated, returns (), then the second statement is\nevaluated --- here, that would be (print \"no...\"). If, as is the\ncase here, test returns anything BUT (), then the first statement is\nevaluated: (print \"Yes!\")"); 
     
     internify(L"cons", &cons_fn, 
 	      list(2, make_arg(car), make_arg(cdr)), 
@@ -128,28 +128,29 @@ void intern_builtin_functions(machine *m)
      
     internify(L"unhandle-signal", &unhandle_signal, 
 	      list(1, make_arg(sig)), 
-	      m, L"See (help signal), (help handle-signals), and (help base-signal-handler).");
+	      m, L"unhandle-signal is only used when you've got a signal you're\nhandling. If you've set up a signal handler, and the signal you're\nhandling is the wrong one --- you've caught a dolphin in your nets, so\nto speak --- unhandle-signal will free the dolphin! (so that it can be\ntrapped by the next handler...  See (help signal), (help\nhandle-signals), and (help base-signal-handler).");
      
     internify(L"base-signal-handler", &base_handler, 
 	      list(1, quote(make_arg(handler))), 
-	      m, L"See (help signal), (help handle-signals), and (help unhandle-signal).");
+	      m, L"Base-signal-handler sets the default behavior of otherwise uncaught\nsignals. See (help signal), (help handle-signals), and (help\nunhandle-signal).");
 
 
 
 
 
-    internify(L"closing-of", &closing_of_fn, list(1, make_arg(a)), m, L"");
+    internify(L"closing-of", &closing_of_fn, list(1, make_arg(a)), m, L"The function closing-of takes a single argument and returns an assoc\nlist of symbols from that argument that have been closed, paired with\nvalues.\n\n->(set! a '(1 2 3))\n(1 2 3)\n->(set! b '(3 a 4))\n(3 a 4)\n>(closing-of b)\n((a (1 2 3)))\n");
 
     internify(L"set-info", &set_info_fn, 
 	      list(2, make_arg(a), make_arg(info)), 
-	      m, L"");
+	      m, L"set-info takes two arguments; the 'info' of the first argument is set to the value of the second. See (help get-info).\n \n->(set! a 5)\n5\n->(set-info a \"this is the info of 5\")\n\"this is the info of 5\"\n->(get-info a)\n \"this is the info of 5\"\n a\n 5\n\n");
 
-    internify(L"get-info", &get_info_fn, list(1, make_arg(a)), m, L"");
-
-
+    internify(L"get-info", &get_info_fn, list(1, make_arg(a)), m, L"get-info takes one argument and returns the 'info' of that\nargument. See (help set-info)\n \n->(set! a 5)\n5\n->(set-info a \"this is the info of 5\")\n\"this is the info of 5\"\n->(get-info a)\n \"this is the info of 5\"\n a\n 5\n\n");
 
 
-    internify(L"print", &print_fn, list(2, symbol(ELIPSIS), make_arg(a)), m, L"");
+
+
+
+    internify(L"print", &print_fn, list(2, symbol(ELIPSIS), make_arg(a)), m, L"print takes as many arguments as you like; if an argument is a string,\nits contents are printed to standard out; other types of arguments are\nprinted as eight objects (with strings bracketed by \"'s, and lists by\n( and ) ).\n\n->(print \"hello\")\nhello\"hello\"\n->(print '(1 2 \"hello\"))\n(1 2 \"hello\")(1 2 \"hello\")\n\nNo newline follows by default. (print newline) will print a line feed.\n");
      
     internify(L"prmachine", &prmachine_fn, nil(), m, L"");
      
@@ -158,6 +159,10 @@ void intern_builtin_functions(machine *m)
     internify(L"stack-trace", 
 	      &stack_trace_fn, 
 	      list(1, make_arg(continuation)), m, L"");
+
+    internify(L"globals", 
+	      &globals_fn, 
+	      nil(), m, L"");
 
      
     internify(L"read-file", &read_file_fn, list(1, make_arg(filename)), m, L"");
@@ -224,16 +229,16 @@ void intern_builtin_functions(machine *m)
 
 void set_fn(machine *m)
 {
-     closure *a = get_arg(a, m);
-     if (a->in->type != SYMBOL){
-	  closure *sig = build_signal(cons(string(L"\n\nHolding a clay pot\nI could call the mouth of it an umbilical cord\n o mother-universe, where is the child that was born in the kiln-fire?\n\n\nerror: I attempted to set! something that isn't a symbol: "), cons(a, nil())), m);
-       	  toss_signal(sig, m);
-     } else {
-	 a = symbol(a->in->symbol_id);
-	 closure *b = get_arg(b, m);
-	 internal_set(a, b, m->current_frame->below, m->base_frame);
-	 m->accum = b;
-     }
+    closure *a = get_arg(a, m);
+    if (a->in->type != SYMBOL){
+	closure *sig = build_signal(cons(string(L"\n\nHolding a clay pot\nI could call the mouth of it an umbilical cord\n o mother-universe, where is the child that was born in the kiln-fire?\n\n\nerror: I attempted to set! something that isn't a symbol: "), cons(a, nil())), m);
+	toss_signal(sig, m);
+    } else {
+	a = symbol(a->in->symbol_id);
+	closure *b = get_arg(b, m);
+	internal_set(a, b, m->current_frame->below, m->base_frame);
+	m->accum = b;
+    }
 }
 
 void quote_fn(machine *m)
@@ -372,6 +377,12 @@ closure *frame_trace(frame *f)
 }
 
 //-------------------- End --------------------------//
+
+void globals_fn(machine *m)
+{
+    m->accum = m->base_frame->scope;
+}
+
 
 void closing_of_fn(machine *m)
 {

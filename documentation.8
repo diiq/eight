@@ -1,0 +1,48 @@
+(def header (... 'str) 
+     (print "<h3>" *str "</h3>
+"))
+
+(def description (... 'str) 
+     (print "<p>
+" *str "</p>
+"))
+
+(def function (... 'str) 
+     (print "<p><code>
+" *str "</code></p>
+
+"))
+
+(def document-fn (fn)
+     (header (first (assoc 'function-name (get-info fn))))
+     (description (string-replace (first (assoc 'help (get-info fn))) 
+			   "
+
+" 
+			   "<br />
+"))
+     (function fn))
+
+(def document-globals ((scope (reverse (globals))))
+     (oif (assoc 'function-name (get-info (first (rest (first scope)))))
+	  (document-fn (first (rest (first scope))))
+	  (header "GLOBAL VARIABLE: " (first (first scope)) " = "
+		  (first (rest (first scope)))))
+     (oif (rest scope)
+	  (document-globals (rest scope))))
+
+(print "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\"> 
+<html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\"> 
+  <head> 
+    <meta http-equiv=\"Content-Type\" content=\"text/html\" charset=\"UTF-8\"/> 
+    <title>Eight Documentation</title> 
+    <link href=\"style.css\" title=\"Medium\" rel=\"stylesheet\" /> 
+  </head> 
+  <body> 
+    <table class=\"vert\"><tr><td> 
+    <div class=\"block\"> 
+      <div class=\"header\">eight documentation<br /></div> 
+      <div class=\"content\">
+") 
+(document-globals)
+(print "</div></td></tr></table></body></html>")

@@ -155,6 +155,9 @@ closure *parse_string(FILE *file, closure *accum)
     wchar_t c = fgetwc(file);
     if(c == L'\"'){
 	return reverse(accum);
+    } else if (c == '\\') {
+	wchar_t c = fgetwc(file);
+	return parse_string(file, cons(character(c), accum));
     } else {
 	return parse_string(file, cons(character(c), accum));
     }

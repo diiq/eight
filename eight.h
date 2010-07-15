@@ -339,6 +339,7 @@ void print_fn(machine *m);
 void prmachine_fn(machine *m);
 void start_debug_fn(machine *m);
 void stack_trace_fn(machine *m);
+void globals_fn(machine *m);
 
 //maths
 void plus_fn(machine *m);     

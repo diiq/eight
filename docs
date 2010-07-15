@@ -1,29 +1,535 @@
-Eight is pretty easy to learn. Here is how it works. There are some basic types:
+<heading>document-globals</heading>
+<description>
+()</descrption>
 
+<heading>document-fn</heading>
+<description>
+()</descrption>
 
-Symbols: build-spit, ham, cow-or-not, labia!, +, and others.
+<heading>body</heading>
+<description>
+()</descrption>
 
-Symbols are represented by a word (dashes, exclamation points, and question marks are fine --- but don't use spaces, apostrophes, commas, asterices, or ampersands!).
+<heading>header</heading>
+<description>
+()</descrption>
 
-Symbols can be bound to other objects --- like a variable in other languages:
--> (set! one-hand 5)
+<heading>reverse</heading>
+<description>
+reverse reverses the order of a list. Calling
+
+ (reverse '(1 2 3 4 5))
+
+Returns
+
+ (5 4 3 2 1)) </descrption>
+
+<heading>with</heading>
+<description>
+()</descrption>
+
+<heading>pair</heading>
+<description>
+pair takes a list and an optional function. It applies the
+ function to successive pairs in the list. Because the default
+ function is 'list', calling
+
+ (pair '(1 2 3 4 5 6 7 8))
+
+returns
+
+ ((1 2) (3 4) (5 6) (7 8)) </descrption>
+
+<heading>append</heading>
+<description>
+append takes n lists and joins them. Calling
+
+ (append '(1 2 3 4 5) '(6 7 8) '(9 10))
+
+returns:
+
+ (1 2 3 4 5 6 7 8 9 10) </descrption>
+
+<heading>cons</heading>
+<description>
+cons takes two arguments and builds a cons-pair from them. Please do
+not use cons; use join whenever possible. Please ALWAYS ensure that
+the result of using cons is a 'proper list' --- that is, one that ends
+with a (). You can tell if your list is a proper list by calling
+(print list); if a . appears anywhere in your structure, you've used
+cons innapropriately. Jerk.</descrption>
+
+<heading>rest</heading>
+<description>
+rest returns all but the first element of a list, string, file-stream,
+&c. It can be modified using add-rest-function.
+
+ (join (first x) (rest x)) is equivalent to x.</descrption>
+
+<heading>inner-rest</heading>
+<description>
+()</descrption>
+
+<heading>first</heading>
+<description>
+First returns the first element of a list, string, file-stream,
+&c. It can be modified using add-first-function.
+
+ (join (first x) (rest x)) is equivalent to x.</descrption>
+
+<heading>inner-first</heading>
+<description>
+()</descrption>
+
+<heading>add-rest-function</heading>
+<description>
+add-rest-function takes two functions. The first is a boolean
+test with one argument. When (rest x) is called, if no subsequent
+test returns true, this test will be called with x as it's
+argument. If it returns true, the second function will be called with
+x as the argument, and the result returned.
+
+In this way, rest can be generalized for new data types.</descrption>
+
+<heading>add-first-function</heading>
+<description>
+add-first-function takes two functions. The first is a boolean
+test with one argument. When (first x) is called, if no subsequent
+test returns true, this test will be called with x as it's
+argument. If it returns true, the second function will be called with
+x as the argument, and the result returned.
+
+In this way, first can be generalized for new data types.</descrption>
+
+<heading>GLOBAL VARIABLE: rest-table = ((((xs) (is (car (assoc (' type) (get-info (car (cdr xs))))) (' stream))) ((xs) (set-cdr xs (list (read-character (car (cdr xs))) (car (cdr xs)))) (cdr xs))) (((xs) (cons-p xs)) ((xs) (cdr xs))) (((xs) t) ((xs) (signal (list "
+
+a man akimbo
+suddenly pulls his fist to his breast
+as he quietly accumulates
+
+error: I tried to take the rest of something I don't know how to take
+the rest of:" xs)))))</heading>
+<heading>GLOBAL VARIABLE: first-table = ((((xs) (is (car (assoc (' type) (get-info (car (cdr xs))))) (' stream))) ((xs) (set-cdr xs (list (read-character (car (cdr xs))) (car (cdr xs)))) (car xs))) (((xs) (cons-p xs)) ((xs) (car xs))) (((xs) t) ((xs) (signal (list "
+
+The ten thousand things unshatter
+the film of an explosion
+played in reverse.
+
+error: I tried to take the first element of something I don't know how to take the first element of:" xs)))))</heading>
+<heading>digit-p</heading>
+<description>
+()</descrption>
+
+<heading>backslash-p</heading>
+<description>
+()</descrption>
+
+<heading>comment-character-p</heading>
+<description>
+()</descrption>
+
+<heading>character-marker-p</heading>
+<description>
+()</descrption>
+
+<heading>doublequote-p</heading>
+<description>
+()</descrption>
+
+<heading>close-paren-p</heading>
+<description>
+()</descrption>
+
+<heading>open-paren-p</heading>
+<description>
+()</descrption>
+
+<heading>newline-p</heading>
+<description>
+()</descrption>
+
+<heading>map1</heading>
+<description>
+map1 applies a function to each element of a single list. Map is
+preferred unless speed is important. And if speed is important, why
+are you using Eight?</descrption>
+
+<heading>help</heading>
+<description>
+Thought you'd be clever and (help help), eh? Good for you. Help
+returns a help-string for anything that has one. You can add a help
+string to anything by adding the list ('help string) to the info-rib
+of an object. With def, it's even easier --- just add your help string
+after the lambda list:
+
+  (def foo (bar)
+         ------> HERE <------
+      (blah blah baz))
+
+ Good luck!</descrption>
+
+<heading>list</heading>
+<description>
+List creates a list of its arguments in order.</descrption>
+
+<heading>copylist</heading>
+<description>
+Element-wise copies a list. This is useful because
+Eight passes arguments by reference; changing part of a list can have
+unintended consequences if some sub-lists are also used
+elsewhere. Copylist can help protect against that, when such mangling
+is not in your favor.</descrption>
+
+<heading>or</heading>
+<description>
+Performs logical or. Returns () if and only if all arguments
+evaluate to (). Or evaluates arguments in order, and stops when it
+reaches a non-() value.
+
+Or is particularly beautiful in Eight.</descrption>
+
+<heading>cons-p</heading>
+<description>
+Returns a true-value if x is a cons-pair, and () otherwise.</descrption>
+
+<heading>identity</heading>
+<description>
+Returns argument unchanged.</descrption>
+
+<heading>print-stack-trace</heading>
+<description>
+print-stack-trace takes a continuation, and prints out the
+functions that were called (and the arguments they were called with)
+that lead up to the creation of that continuation. Try:
+
+ (print-stack-trace (call/cc indentity))
+
+This function is most frequently used when dealing with unexpected
+signals.</descrption>
+
+<heading>format-stack-trace</heading>
+<description>
+()</descrption>
+
+<heading>format-assoc</heading>
+<description>
+format-scope takes an assoc list, and formats it as
+        key -> value.
+</descrption>
+
+<heading>GLOBAL VARIABLE: newline = 
+</heading>
+<heading>assoc</heading>
+<description>
+Assoc takes a key and a list of the form ((key1 value1) (key2
+value2) (key3 value3)). If I called assoc with the key 'key2 and the
+above list (which can be called an assoc-list or a rib), assoc will
+return (value2). Be careful, and note that this is a list of one
+element! If you want just the value, you must take (first (assoc key
+alist)).
+
+It may seem strange to return a list like this, but doing so has two
+advantages:
+
+1. If there is no corresponding value in the list, assoc returns (),
+but if the key is *bound* to (), assoc returns (()).
+
+2. If the value needs to be changed, setting the first element of the
+returned list will set the value in the original rib.</descrption>
+
+<heading>no</heading>
+<description>
+Returns t if x is (). Returns () otherwise.</descrption>
+
+<heading>def</heading>
+<description>
+()</descrption>
+
+<heading>string-p</heading>
+<description>
+()</descrption>
+
+<heading>fn</heading>
+<description>
+()</descrption>
+
+<heading>leak-all</heading>
+<description>
+()</descrption>
+
+<heading>unlambda</heading>
+<description>
+()</descrption>
+
+<heading>sup</heading>
+<description>
+()</descrption>
+
+<heading><</heading>
+<description>
+()</descrption>
+
+<heading>></heading>
+<description>
+()</descrption>
+
+<heading>divide</heading>
+<description>
+()</descrption>
+
+<heading>multiply</heading>
+<description>
+()</descrption>
+
+<heading>minus</heading>
+<description>
+()</descrption>
+
+<heading>plus</heading>
+<description>
+()</descrption>
+
+<heading>character-p</heading>
+<description>
+()</descrption>
+
+<heading>string-to-number</heading>
+<description>
+()</descrption>
+
+<heading>symbol-to-string</heading>
+<description>
+()</descrption>
+
+<heading>string-to-symbol</heading>
+<description>
+()</descrption>
+
+<heading>eof-p</heading>
+<description>
+()</descrption>
+
+<heading>whitespace-p</heading>
+<description>
+()</descrption>
+
+<heading>read-character</heading>
+<description>
+()</descrption>
+
+<heading>close-file</heading>
+<description>
+()</descrption>
+
+<heading>read-file</heading>
+<description>
+()</descrption>
+
+<heading>globals</heading>
+<description>
+()</descrption>
+
+<heading>stack-trace</heading>
+<description>
+()</descrption>
+
+<heading>start-debug</heading>
+<description>
+()</descrption>
+
+<heading>prmachine</heading>
+<description>
+()</descrption>
+
+<heading>print</heading>
+<description>
+print takes as many arguments as you like; if an argument is a string,
+its contents are printed to standard out; other types of arguments are
+printed as eight objects (with strings bracketed by "'s, and lists by
+( and ) ).
+
+->(print "hello")
+hello"hello"
+->(print '(1 2 "hello"))
+(1 2 "hello")(1 2 "hello")
+
+No newline follows by default. (print newline) will print a line feed.
+</descrption>
+
+<heading>get-info</heading>
+<description>
+get-info takes one argument and returns the 'info' of that
+argument. See (help set-info)
+ 
+->(set! a 5)
 5
--> one-hand
+->(set-info a "this is the info of 5")
+"this is the info of 5"
+->(get-info a)
+ "this is the info of 5"
+ a
+ 5
+
+</descrption>
+
+<heading>set-info</heading>
+<description>
+set-info takes two arguments; the 'info' of the first argument is set to the value of the second. See (help get-info).
+ 
+->(set! a 5)
 5
-Now one hand is 'bound' to the number five, and will be replaced by five in simple expressions:
--> (+ 5 2)
-7
--> (+ one-hand 2)
-7
-Note that symbols are objects of their own right --- if you've never used a lisp-like language, this may come as a bit of a shock. You'll catch on quickly, though!
+->(set-info a "this is the info of 5")
+"this is the info of 5"
+->(get-info a)
+ "this is the info of 5"
+ a
+ 5
 
-Integers: 1, 3, 2, 6, 49,324,261, etc.
+</descrption>
 
-Your basic integer is limited in range, depending on the machine that Eight is running on. [This is not, in fact, a problem --- as you'll soon see.]
+<heading>closing-of</heading>
+<description>
+The function closing-of takes a single argument and returns an assoc
+list of symbols from that argument that have been closed, paired with
+values.
 
-Characters: a, G, %, K, ., and so on.
+->(set! a '(1 2 3))
+(1 2 3)
+->(set! b '(3 a 4))
+(3 a 4)
+>(closing-of b)
+((a (1 2 3)))
+</descrption>
 
-Characters are characters like letters or symbols; you'll rarely deal with them individually.
+<heading>base-signal-handler</heading>
+<description>
+base-signal-handler sets the behavior of eight when it encounters an unhandled signal. The default is to print a stack trace, the signal poem/message, and then the first datum sent with the signal.</descrption>
 
-Lists: (1 build-spit "g" ham), (5), ()
+<heading>unhandle-signal</heading>
+<description>
+unhandle-signal is only used when you've got a signal you're
+handling. If you've set up a signal handler, and the signal you're
+handling is the wrong one --- you've caught a dolphin in your nets, so
+to speak --- unhandle-signal will free the dolphin! (so that it can be
+trapped by the next handler...  See (help signal), (help
+handle-signals), and (help base-signal-handler).</descrption>
 
+<heading>handle-signals</heading>
+<description>
+handle-signals takes two arguments. The first argument is a unary function; the second is code. If the code throws a signal, that signal will be handed to the function. See (help signal), (help unhandle-signal), and (help base-signal-handler).</descrption>
+
+<heading>signal</heading>
+<description>
+Signal takes one argument. It builds a signal which is a list; the first element of the list is a continuation [see (help call/cc)] and the second element is whatever you passed to (signal). That whole package is then passed to the nearest signal-handler. See (help handle-signals), (help unhandle-signal), and (help base-signal-handler).</descrption>
+
+<heading>set-cdr</heading>
+<description>
+set-car takes two arguments; a list, and a statement. All but the first element of the list is set to the value of the statement.</descrption>
+
+<heading>set-car</heading>
+<description>
+set-car takes two arguments; a list, and a statement. The first
+element of the list is set to the value of the statement.</descrption>
+
+<heading>set!</heading>
+<description>
+set! takes two arguments; the first is a symbol, and is NOT evaluated;
+the second argument is evaluated. The symbol is bound to that value.
+
+(set! a 5)
+5
+a
+5
+</descrption>
+
+<heading>leak</heading>
+<description>
+BANANA BANANA BANANA leak is hard to explain. Please yell at me so that I write copy on this. 
+
+diiq is too silly
+to write documentation
+potato salad.
+
+</descrption>
+
+<heading>atom-p</heading>
+<description>
+atom-p takes one argument and returns t if that argument is not a list, and () otherwise.</descrption>
+
+<heading>call/cc</heading>
+<description>
+Woah boy. Call with current continuation is hard. So here's a
+wikipedia article instead:
+http://en.wikipedia.org/wiki/Call-with-current-continuation</descrption>
+
+<heading>,</heading>
+<description>
+, is a function that takes one argument and evaluates it.
+
+(, '(plus 2 3))
+5
+
+Think of it as the inverse of '. See (help ').</descrption>
+
+<heading>cdr</heading>
+<description>
+The function car is a low-level way of retrieving all but the first element of
+a list. Please use (rest) instead. cdr should be used only when you wish to be speedy. 
+You're reading this. So you don't.</descrption>
+
+<heading>car</heading>
+<description>
+The function car is a low-level way of retrieving the first element of
+a list. Please use (first) instead. Car should be used only when speed
+is of the essence --- when I can also reccomend using something other
+than Eight.</descrption>
+
+<heading>cons</heading>
+<description>
+cons takes two arguments and builds a cons-pair from them. Please do
+not use cons; use join whenever possible. Please ALWAYS ensure that
+the result of using cons is a 'proper list' --- that is, one that ends
+with a (). You can tell if your list is a proper list by calling
+(print list); if a . appears anywhere in your structure, you've used
+cons innapropriately. Jerk.</descrption>
+
+<heading>oif</heading>
+<description>
+oif is a simple conditional. It takes a test and two statements:
+
+->(if (is 3 3)
+    (print "Yes!")
+    (print "no..."))
+Yes!
+
+If the test, when evaluated, returns (), then the second statement is
+evaluated --- here, that would be (print "no..."). If, as is the
+case here, test returns anything BUT (), then the first statement is
+evaluated: (print "Yes!")</descrption>
+
+<heading>'</heading>
+<description>
+The function ' takes one argument and returns that argument UNMODIFIED
+and UNEVALUATED, but with an associated closure --- so that if the
+return value is evaluated at any time in the future, it returns what
+it would have returned, had it been evaluated at the time of '-ing.</descrption>
+
+<heading>is</heading>
+<description>
+The function (is) tests for simple equality; it takes two arguments
+and returns t when those arguments are equal, or () when they are
+not. Two things are equal if they are the same symbol, the same
+object, or equal numbers. Lists with equal elements made at different
+times are NOT equal:
+
+(is 3 3)
+t
+(set! a '(1 2 3))
+(is a a)
+t
+(is a '(1 2 3))
+()
+
+</descrption>
+
+<heading>GLOBAL VARIABLE: t = t</heading>

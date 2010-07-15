@@ -429,3 +429,39 @@ Returns
 	  xs
 	  (append (reverse (rest xs)) (list (first xs)))))
 
+(def replace (list replacee replacement)
+     (oif (no list)
+	  ()
+	  (oif (is (first list) replacee)
+	       (join replacement 
+		       (replace (rest list) replacee replacement))
+	       (join (first list) 
+		     (replace (rest list) replacee replacement)))))
+
+(def string-first-match (string match)
+     (oif (no match)
+	  t
+	  (oif (is (first string) (first match))
+	       (string-first-match (rest string) (rest match))
+	       ())))
+
+(def nth-rest (n list)
+     (oif (is n 0) 
+	  list
+	  (nth-rest (minus n 1) (rest list))))
+
+(def length (list (n 0))
+     (oif list
+	  (length (rest list) (plus n 1))
+	  n))
+
+(def string-replace (list replacee replacement)
+     (oif (no list)
+	  ()
+	  (oif (string-first-match list replacee)
+	       (append replacement 
+		       (string-replace (nth-rest (length replacee) list) 
+				replacee 
+				replacement))
+	       (join (first list) 
+		     (string-replace (rest list) replacee replacement)))))

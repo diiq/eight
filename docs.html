@@ -1,0 +1,721 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> 
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"> 
+  <head> 
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8"/> 
+    <title>Eight Documentation</title> 
+    <link href="style.css" title="Medium" rel="stylesheet" /> 
+  </head> 
+  <body> 
+    <table class="vert"><tr><td> 
+    <div class="block"> 
+      <div class="header">eight documentation<br /></div> 
+      <div class="content">
+<h3>GLOBAL VARIABLE: t = t</h3>
+<h3>is</h3>
+<p>
+The function (is) tests for simple equality; it takes two arguments
+and returns t when those arguments are equal, or () when they are
+not. Two things are equal if they are the same symbol, the same
+object, or equal numbers. Lists with equal elements made at different
+times are NOT equal:<br />
+(is 3 3)
+t
+(set! a '(1 2 3))
+(is a a)
+t
+(is a '(1 2 3))
+()<br />
+</p>
+<p><code>
+((a b) v0x404d00)</code></p>
+
+<h3>'</h3>
+<p>
+The function ' takes one argument and returns that argument UNMODIFIED
+and UNEVALUATED, but with an associated closure --- so that if the
+return value is evaluated at any time in the future, it returns what
+it would have returned, had it been evaluated at the time of '-ing.</p>
+<p><code>
+((x) v0x404df0)</code></p>
+
+<h3>oif</h3>
+<p>
+oif is a simple conditional. It takes a test and two statements:<br />
+->(if (is 3 3)
+    (print "Yes!")
+    (print "no..."))
+Yes!<br />
+If the test, when evaluated, returns (), then the second statement is
+evaluated --- here, that would be (print "no..."). If, as is the
+case here, test returns anything BUT (), then the first statement is
+evaluated: (print "Yes!")</p>
+<p><code>
+((test (' then) (' elser)) v0x404bb0)</code></p>
+
+<h3>cons</h3>
+<p>
+cons takes two arguments and builds a cons-pair from them. Please do
+not use cons; use join whenever possible. Please ALWAYS ensure that
+the result of using cons is a 'proper list' --- that is, one that ends
+with a (). You can tell if your list is a proper list by calling
+(print list); if a . appears anywhere in your structure, you've used
+cons innapropriately. Jerk.</p>
+<p><code>
+((car cdr) v0x406e30)</code></p>
+
+<h3>car</h3>
+<p>
+The function car is a low-level way of retrieving the first element of
+a list. Please use (first) instead. Car should be used only when speed
+is of the essence --- when I can also reccomend using something other
+than Eight.</p>
+<p><code>
+((cons) v0x406d60)</code></p>
+
+<h3>cdr</h3>
+<p>
+The function car is a low-level way of retrieving all but the first element of
+a list. Please use (rest) instead. cdr should be used only when you wish to be speedy. 
+You're reading this. So you don't.</p>
+<p><code>
+((cons) v0x406c90)</code></p>
+
+<h3>,</h3>
+<p>
+, is a function that takes one argument and evaluates it.<br />
+(, '(plus 2 3))
+5<br />
+Think of it as the inverse of '. See (help ').</p>
+<p><code>
+((closure) v0x404a40)</code></p>
+
+<h3>call/cc</h3>
+<p>
+Woah boy. Call with current continuation is hard. So here's a
+wikipedia article instead:
+http://en.wikipedia.org/wiki/Call-with-current-continuation</p>
+<p><code>
+(((' fn)) v0x4075c0)</code></p>
+
+<h3>atom-p</h3>
+<p>
+atom-p takes one argument and returns t if that argument is not a list, and () otherwise.</p>
+<p><code>
+((a) v0x404b40)</code></p>
+
+<h3>leak</h3>
+<p>
+BANANA BANANA BANANA leak is hard to explain. Please yell at me so that I write copy on this. <br />
+diiq is too silly
+to write documentation
+potato salad.<br />
+</p>
+<p><code>
+((sym closure) v0x406a90)</code></p>
+
+<h3>set!</h3>
+<p>
+set! takes two arguments; the first is a symbol, and is NOT evaluated;
+the second argument is evaluated. The symbol is bound to that value.<br />
+(set! a 5)
+5
+a
+5
+</p>
+<p><code>
+(((' a) b) v0x406ee0)</code></p>
+
+<h3>set-car</h3>
+<p>
+set-car takes two arguments; a list, and a statement. The first
+element of the list is set to the value of the statement.</p>
+<p><code>
+((cons value) v0x403f20)</code></p>
+
+<h3>set-cdr</h3>
+<p>
+set-car takes two arguments; a list, and a statement. All but the first element of the list is set to the value of the statement.</p>
+<p><code>
+((cons value) v0x403e70)</code></p>
+
+<h3>signal</h3>
+<p>
+Signal takes one argument. It builds a signal which is a list; the first element of the list is a continuation [see (help call/cc)] and the second element is whatever you passed to (signal). That whole package is then passed to the nearest signal-handler. See (help handle-signals), (help unhandle-signal), and (help base-signal-handler).</p>
+<p><code>
+((sig) v0x406a20)</code></p>
+
+<h3>handle-signals</h3>
+<p>
+handle-signals takes two arguments. The first argument is a unary function; the second is code. If the code throws a signal, that signal will be handed to the function. See (help signal), (help unhandle-signal), and (help base-signal-handler).</p>
+<p><code>
+(((' handler) (' body)) v0x404970)</code></p>
+
+<h3>unhandle-signal</h3>
+<p>
+unhandle-signal is only used when you've got a signal you're
+handling. If you've set up a signal handler, and the signal you're
+handling is the wrong one --- you've caught a dolphin in your nets, so
+to speak --- unhandle-signal will free the dolphin! (so that it can be
+trapped by the next handler...  See (help signal), (help
+handle-signals), and (help base-signal-handler).</p>
+<p><code>
+((sig) v0x4083e0)</code></p>
+
+<h3>base-signal-handler</h3>
+<p>
+base-signal-handler sets the behavior of eight when it encounters an unhandled signal. The default is to print a stack trace, the signal poem/message, and then the first datum sent with the signal.</p>
+<p><code>
+(((' handler)) v0x404910)</code></p>
+
+<h3>closing-of</h3>
+<p>
+The function closing-of takes a single argument and returns an assoc
+list of symbols from that argument that have been closed, paired with
+values.<br />
+->(set! a '(1 2 3))
+(1 2 3)
+->(set! b '(3 a 4))
+(3 a 4)
+>(closing-of b)
+((a (1 2 3)))
+</p>
+<p><code>
+((a) v0x404ae0)</code></p>
+
+<h3>set-info</h3>
+<p>
+set-info takes two arguments; the 'info' of the first argument is set to the value of the second. See (help get-info).
+ 
+->(set! a 5)
+5
+->(set-info a "this is the info of 5")
+"this is the info of 5"
+->(get-info a)
+ "this is the info of 5"
+ a
+ 5<br />
+</p>
+<p><code>
+((a info) v0x404280)</code></p>
+
+<h3>get-info</h3>
+<p>
+get-info takes one argument and returns the 'info' of that
+argument. See (help set-info)
+ 
+->(set! a 5)
+5
+->(set-info a "this is the info of 5")
+"this is the info of 5"
+->(get-info a)
+ "this is the info of 5"
+ a
+ 5<br />
+</p>
+<p><code>
+((a) v0x404210)</code></p>
+
+<h3>print</h3>
+<p>
+print takes as many arguments as you like; if an argument is a string,
+its contents are printed to standard out; other types of arguments are
+printed as eight objects (with strings bracketed by "'s, and lists by
+( and ) ).<br />
+->(print "hello")
+hello"hello"
+->(print '(1 2 "hello"))
+(1 2 "hello")(1 2 "hello")<br />
+No newline follows by default. (print newline) will print a line feed.
+</p>
+<p><code>
+((... a) v0x405b80)</code></p>
+
+<h3>prmachine</h3>
+<p>
+()</p>
+<p><code>
+(() v0x405910)</code></p>
+
+<h3>start-debug</h3>
+<p>
+()</p>
+<p><code>
+(() v0x400f50)</code></p>
+
+<h3>stack-trace</h3>
+<p>
+()</p>
+<p><code>
+((continuation) v0x407cd0)</code></p>
+
+<h3>globals</h3>
+<p>
+()</p>
+<p><code>
+(() v0x400f60)</code></p>
+
+<h3>read-file</h3>
+<p>
+()</p>
+<p><code>
+((filename) v0x407010)</code></p>
+
+<h3>close-file</h3>
+<p>
+()</p>
+<p><code>
+((handle) v0x404f00)</code></p>
+
+<h3>read-character</h3>
+<p>
+()</p>
+<p><code>
+((handle) v0x403fd0)</code></p>
+
+<h3>whitespace-p</h3>
+<p>
+()</p>
+<p><code>
+((char) v0x404180)</code></p>
+
+<h3>eof-p</h3>
+<p>
+()</p>
+<p><code>
+((char) v0x404100)</code></p>
+
+<h3>string-to-symbol</h3>
+<p>
+()</p>
+<p><code>
+((string) v0x405320)</code></p>
+
+<h3>symbol-to-string</h3>
+<p>
+()</p>
+<p><code>
+((sym) v0x405ff0)</code></p>
+
+<h3>string-to-number</h3>
+<p>
+()</p>
+<p><code>
+((string) v0x405110)</code></p>
+
+<h3>character-p</h3>
+<p>
+()</p>
+<p><code>
+((character) v0x403e00)</code></p>
+
+<h3>plus</h3>
+<p>
+()</p>
+<p><code>
+((a b) v0x404810)</code></p>
+
+<h3>minus</h3>
+<p>
+()</p>
+<p><code>
+((a b) v0x404710)</code></p>
+
+<h3>multiply</h3>
+<p>
+()</p>
+<p><code>
+((a b) v0x404610)</code></p>
+
+<h3>divide</h3>
+<p>
+()</p>
+<p><code>
+((a b) v0x404510)</code></p>
+
+<h3>></h3>
+<p>
+()</p>
+<p><code>
+((a b) v0x404450)</code></p>
+
+<h3><</h3>
+<p>
+()</p>
+<p><code>
+((a b) v0x404390)</code></p>
+
+<h3>sup</h3>
+<p>
+()</p>
+<p><code>
+((q) (oif (is q 1) poo (sup (minus q 1))))</code></p>
+
+<h3>unlambda</h3>
+<p>
+()</p>
+<p><code>
+((list) (oif list (oif (is (car list) (' ...)) (unlambda (cdr list)) (cons (oif (atom-p (car list)) (car list) (oif (atom-p (car (car list))) (oif (is (car (car list)) (' ')) (car (cdr (car list))) (car (car list))) (oif (is (car (car (car list))) (' ')) (car (cdr (car (car list)))) (signal "Bad lambda list!")))) (unlambda (cdr list)))) ()))</code></p>
+
+<h3>leak-all</h3>
+<p>
+()</p>
+<p><code>
+((list closure) (oif list (leak-all (cdr list) (leak (car list) closure)) closure))</code></p>
+
+<h3>fn</h3>
+<p>
+()</p>
+<p><code>
+(((' lambda-list) ... (' code)) (set-info (cons lambda-list (leak-all (unlambda lambda-list) code)) (cons (cons (' function-name) (cons (' anonymous-function) ())) ())))</code></p>
+
+<h3>string-p</h3>
+<p>
+()</p>
+<p><code>
+((string) (oif string (oif (character-p (car string)) (string-p (cdr string)) ()) t))</code></p>
+
+<h3>def</h3>
+<p>
+()</p>
+<p><code>
+(((' name) (' lambda-list) ... (' code)) (set! (, name) (set-info (fn (, lambda-list) (* (oif (string-p (car code)) (cdr code) code))) (cons (cons (' function-name) (cons name ())) (oif (string-p (car code)) (cons (cons (' help) (cons (car code) ())) ()) ())))))</code></p>
+
+<h3>no</h3>
+<p>
+Returns t if x is (). Returns () otherwise.</p>
+<p><code>
+((x) (is x ()))</code></p>
+
+<h3>assoc</h3>
+<p>
+Assoc takes a key and a list of the form ((key1 value1) (key2
+value2) (key3 value3)). If I called assoc with the key 'key2 and the
+above list (which can be called an assoc-list or a rib), assoc will
+return (value2). Be careful, and note that this is a list of one
+element! If you want just the value, you must take (first (assoc key
+alist)).<br />
+It may seem strange to return a list like this, but doing so has two
+advantages:<br />
+1. If there is no corresponding value in the list, assoc returns (),
+but if the key is *bound* to (), assoc returns (()).<br />
+2. If the value needs to be changed, setting the first element of the
+returned list will set the value in the original rib.</p>
+<p><code>
+((key al) (oif (no al) () (oif (is (car (car al)) key) (cdr (car al)) (assoc key (cdr al)))))</code></p>
+
+<h3>GLOBAL VARIABLE: newline = 
+</h3>
+<h3>format-assoc</h3>
+<p>
+format-scope takes an assoc list, and formats it as
+        key -> value.
+</p>
+<p><code>
+((scope) (oif (handle-signals (fn (a) t) (no (is (, (car (car scope))) (car (cdr (car scope)))))) (print " |      " (car (car scope)) " -> " (car (cdr (car scope))) newline)) (oif (cdr scope) (format-assoc (cdr scope))))</code></p>
+
+<h3>format-stack-trace</h3>
+<p>
+()</p>
+<p><code>
+((trace) (print " V" newline " " (car (assoc (' function-name) (get-info (car (car trace))))) newline) (format-assoc (car (cdr (car trace)))) (oif (cdr trace) (format-stack-trace (cdr trace))))</code></p>
+
+<h3>print-stack-trace</h3>
+<p>
+print-stack-trace takes a continuation, and prints out the
+functions that were called (and the arguments they were called with)
+that lead up to the creation of that continuation. Try:<br />
+ (print-stack-trace (call/cc indentity))<br />
+This function is most frequently used when dealing with unexpected
+signals.</p>
+<p><code>
+((continuation) (format-stack-trace (stack-trace continuation)))</code></p>
+
+<h3>identity</h3>
+<p>
+Returns argument unchanged.</p>
+<p><code>
+((x) x)</code></p>
+
+<h3>cons-p</h3>
+<p>
+Returns a true-value if x is a cons-pair, and () otherwise.</p>
+<p><code>
+((x) (no (atom-p x)))</code></p>
+
+<h3>or</h3>
+<p>
+Performs logical or. Returns () if and only if all arguments
+evaluate to (). Or evaluates arguments in order, and stops when it
+reaches a non-() value.<br />
+Or is particularly beautiful in Eight.</p>
+<p><code>
+((arg ... (' args)) (oif args (oif arg arg (or (* args))) arg))</code></p>
+
+<h3>copylist</h3>
+<p>
+Element-wise copies a list. This is useful because
+Eight passes arguments by reference; changing part of a list can have
+unintended consequences if some sub-lists are also used
+elsewhere. Copylist can help protect against that, when such mangling
+is not in your favor.</p>
+<p><code>
+((xs) (oif (no xs) () (cons (car xs) (copylist (cdr xs)))))</code></p>
+
+<h3>list</h3>
+<p>
+List creates a list of its arguments in order.</p>
+<p><code>
+((... args) (copylist args))</code></p>
+
+<h3>help</h3>
+<p>
+Thought you'd be clever and (help help), eh? Good for you. Help
+returns a help-string for anything that has one. You can add a help
+string to anything by adding the list ('help string) to the info-rib
+of an object. With def, it's even easier --- just add your help string
+after the lambda list:<br />
+  (def foo (bar)
+         ------> HERE <------
+      (blah blah baz))<br />
+ Good luck!</p>
+<p><code>
+((what-you-want-help-with) (print newline (car (assoc (' help) (get-info what-you-want-help-with))) newline) ())</code></p>
+
+<h3>map1</h3>
+<p>
+map1 applies a function to each element of a single list. Map is
+preferred unless speed is important. And if speed is important, why
+are you using Eight?</p>
+<p><code>
+((f xs) (oif xs (cons (f (car xs)) (map1 f (cdr xs)))))</code></p>
+
+<h3>newline-p</h3>
+<p>
+()</p>
+<p><code>
+((char) (is char $
+))</code></p>
+
+<h3>open-paren-p</h3>
+<p>
+()</p>
+<p><code>
+((char) (is char $())</code></p>
+
+<h3>close-paren-p</h3>
+<p>
+()</p>
+<p><code>
+((char) (is char $)))</code></p>
+
+<h3>doublequote-p</h3>
+<p>
+()</p>
+<p><code>
+((char) (is char $"))</code></p>
+
+<h3>character-marker-p</h3>
+<p>
+()</p>
+<p><code>
+((char) (is char $$))</code></p>
+
+<h3>comment-character-p</h3>
+<p>
+()</p>
+<p><code>
+((char) (is char $#))</code></p>
+
+<h3>backslash-p</h3>
+<p>
+()</p>
+<p><code>
+((char) (is char $\))</code></p>
+
+<h3>digit-p</h3>
+<p>
+()</p>
+<p><code>
+((char) (or (is char $0) (is char $1) (is char $2) (is char $3) (is char $4) (is char $5) (is char $6) (is char $7) (is char $8) (is char $9)))</code></p>
+
+<h3>GLOBAL VARIABLE: first-table = ((((xs) (is (car (assoc (' type) (get-info (car (cdr xs))))) (' stream))) ((xs) (set-cdr xs (list (read-character (car (cdr xs))) (car (cdr xs)))) (car xs))) (((xs) (cons-p xs)) ((xs) (car xs))) (((xs) t) ((xs) (signal (list "
+
+The ten thousand things unshatter
+the film of an explosion
+played in reverse.
+
+error: I tried to take the first element of something I don't know how to take the first element of:" xs)))))</h3>
+<h3>GLOBAL VARIABLE: rest-table = ((((xs) (is (car (assoc (' type) (get-info (car (cdr xs))))) (' stream))) ((xs) (set-cdr xs (list (read-character (car (cdr xs))) (car (cdr xs)))) (cdr xs))) (((xs) (cons-p xs)) ((xs) (cdr xs))) (((xs) t) ((xs) (signal (list "
+
+a man akimbo
+suddenly pulls his fist to his breast
+as he quietly accumulates
+
+error: I tried to take the rest of something I don't know how to take
+the rest of:" xs)))))</h3>
+<h3>add-first-function</h3>
+<p>
+add-first-function takes two functions. The first is a boolean
+test with one argument. When (first x) is called, if no subsequent
+test returns true, this test will be called with x as it's
+argument. If it returns true, the second function will be called with
+x as the argument, and the result returned.<br />
+In this way, first can be generalized for new data types.</p>
+<p><code>
+((test function) (set! first-table (cons (list test function) first-table)))</code></p>
+
+<h3>add-rest-function</h3>
+<p>
+add-rest-function takes two functions. The first is a boolean
+test with one argument. When (rest x) is called, if no subsequent
+test returns true, this test will be called with x as it's
+argument. If it returns true, the second function will be called with
+x as the argument, and the result returned.<br />
+In this way, rest can be generalized for new data types.</p>
+<p><code>
+((test function) (set! rest-table (cons (list test function) rest-table)))</code></p>
+
+<h3>inner-first</h3>
+<p>
+()</p>
+<p><code>
+((xs table) (oif ((car (car table)) xs) ((car (cdr (car table))) xs) (inner-first xs (cdr table))))</code></p>
+
+<h3>first</h3>
+<p>
+First returns the first element of a list, string, file-stream,
+&c. It can be modified using add-first-function.<br />
+ (join (first x) (rest x)) is equivalent to x.</p>
+<p><code>
+((xs) (inner-first xs first-table))</code></p>
+
+<h3>inner-rest</h3>
+<p>
+()</p>
+<p><code>
+((xs table) (oif ((car (car table)) xs) ((car (cdr (car table))) xs) (inner-rest xs (cdr table))))</code></p>
+
+<h3>rest</h3>
+<p>
+rest returns all but the first element of a list, string, file-stream,
+&c. It can be modified using add-rest-function.<br />
+ (join (first x) (rest x)) is equivalent to x.</p>
+<p><code>
+((xs) (inner-rest xs rest-table))</code></p>
+
+<h3>cons</h3>
+<p>
+cons takes two arguments and builds a cons-pair from them. Please do
+not use cons; use join whenever possible. Please ALWAYS ensure that
+the result of using cons is a 'proper list' --- that is, one that ends
+with a (). You can tell if your list is a proper list by calling
+(print list); if a . appears anywhere in your structure, you've used
+cons innapropriately. Jerk.</p>
+<p><code>
+((car cdr) v0x406e30)</code></p>
+
+<h3>append</h3>
+<p>
+append takes n lists and joins them. Calling<br />
+ (append '(1 2 3 4 5) '(6 7 8) '(9 10))<br />
+returns:<br />
+ (1 2 3 4 5 6 7 8 9 10) </p>
+<p><code>
+((xs ys ... (' yss)) (oif xs (join (first xs) (append (rest xs) ys (* yss))) (oif yss (append ys (* yss)) ys)))</code></p>
+
+<h3>pair</h3>
+<p>
+pair takes a list and an optional function. It applies the
+ function to successive pairs in the list. Because the default
+ function is 'list', calling<br />
+ (pair '(1 2 3 4 5 6 7 8))<br />
+returns<br />
+ ((1 2) (3 4) (5 6) (7 8)) </p>
+<p><code>
+((xs (f list)) (oif (no xs) () (oif (no (rest xs)) (list (list (first xs))) (join (f (first xs) (first (rest xs))) (pair (rest (rest xs)) f)))))</code></p>
+
+<h3>with</h3>
+<p>
+()</p>
+<p><code>
+(((' parms) ... (' body)) ((fn (, (map1 first (pair parms))) (* body)) (* (map1 (fn (x) (first (rest x))) (pair parms)))))</code></p>
+
+<h3>reverse</h3>
+<p>
+reverse reverses the order of a list. Calling<br />
+ (reverse '(1 2 3 4 5))<br />
+Returns<br />
+ (5 4 3 2 1)) </p>
+<p><code>
+((xs) (oif (no (rest xs)) xs (append (reverse (rest xs)) (list (first xs)))))</code></p>
+
+<h3>replace</h3>
+<p>
+()</p>
+<p><code>
+((list replacee replacement) (oif (no list) () (oif (is (first list) replacee) (join replacement (replace (rest list) replacee replacement)) (join (first list) (replace (rest list) replacee replacement)))))</code></p>
+
+<h3>string-first-match</h3>
+<p>
+()</p>
+<p><code>
+((string match) (oif (no match) t (oif (is (first string) (first match)) (string-first-match (rest string) (rest match)) ())))</code></p>
+
+<h3>nth-rest</h3>
+<p>
+()</p>
+<p><code>
+((n list) (oif (is n 0) list (nth-rest (minus n 1) (rest list))))</code></p>
+
+<h3>length</h3>
+<p>
+()</p>
+<p><code>
+((list (n 0)) (oif list (length (rest list) (plus n 1)) n))</code></p>
+
+<h3>string-replace</h3>
+<p>
+()</p>
+<p><code>
+((list replacee replacement) (oif (no list) () (oif (string-first-match list replacee) (append replacement (string-replace (nth-rest (length replacee) list) replacee replacement)) (join (first list) (string-replace (rest list) replacee replacement)))))</code></p>
+
+<h3>header</h3>
+<p>
+()</p>
+<p><code>
+((... (' str)) (print "<h3>" (* str) "</h3>
+"))</code></p>
+
+<h3>description</h3>
+<p>
+()</p>
+<p><code>
+((... (' str)) (print "<p>
+" (* str) "</p>
+"))</code></p>
+
+<h3>function</h3>
+<p>
+()</p>
+<p><code>
+((... (' str)) (print "<p><code>
+" (* str) "</code></p>
+
+"))</code></p>
+
+<h3>document-fn</h3>
+<p>
+()</p>
+<p><code>
+((fn) (header (first (assoc (' function-name) (get-info fn)))) (description (string-replace (first (assoc (' help) (get-info fn))) "
+
+" "<br />
+")) (function fn))</code></p>
+
+<h3>document-globals</h3>
+<p>
+()</p>
+<p><code>
+(((scope (reverse (globals)))) (oif (assoc (' function-name) (get-info (first (rest (first scope))))) (document-fn (first (rest (first scope)))) (header "GLOBAL VARIABLE: " (first (first scope)) " = " (first (rest (first scope))))) (oif (rest scope) (document-globals (rest scope))))</code></p>
+
+</div></td></tr></table></body></html>
