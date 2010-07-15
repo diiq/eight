@@ -152,65 +152,65 @@ void intern_builtin_functions(machine *m)
 
     internify(L"print", &print_fn, list(2, symbol(ELIPSIS), make_arg(a)), m, L"print takes as many arguments as you like; if an argument is a string,\nits contents are printed to standard out; other types of arguments are\nprinted as eight objects (with strings bracketed by \"'s, and lists by\n( and ) ).\n\n->(print \"hello\")\nhello\"hello\"\n->(print '(1 2 \"hello\"))\n(1 2 \"hello\")(1 2 \"hello\")\n\nNo newline follows by default. (print newline) will print a line feed.\n");
      
-    internify(L"prmachine", &prmachine_fn, nil(), m, L"");
+    internify(L"prmachine", &prmachine_fn, nil(), m, L"prmachine takes no arguments; it prints the current call stack, all scopes, from the current calculation down to the base frame (of globals).");
      
-    internify(L"start-debug", &start_debug_fn, nil(), m, L"");
+    internify(L"start-debug", &start_debug_fn, nil(), m, L"Once start-debug is called, EXTENSIVE debuggin information about the Eight virtual machine will be printed during each calculation. Expect dozens of pages of gobbledegook.");
 
     internify(L"stack-trace", 
 	      &stack_trace_fn, 
-	      list(1, make_arg(continuation)), m, L"");
+	      list(1, make_arg(continuation)), m, L"The function stack-trace takes a single argument. That argument *must* be a continuation. A segmentation fault will result otherwise. stack-trace returns a list of lists, containing function-calls and scope-assoc-lists for every frame in the call stack present when the continuation was made. See (help print-stack-trace).");
 
     internify(L"globals", 
 	      &globals_fn, 
-	      nil(), m, L"");
+	      nil(), m, L"Returns an assoc list of every global variable and the respective values.");
 
      
-    internify(L"read-file", &read_file_fn, list(1, make_arg(filename)), m, L"");
+    internify(L"read-file", &read_file_fn, list(1, make_arg(filename)), m, L"Opens a file for reading. Returns a file handle. Files can be examined with (first) and (rest). Read only. See (help close-file)");
 
-    internify(L"close-file", &close_file_fn, list(1, make_arg(handle)), m, L"");
+    internify(L"close-file", &close_file_fn, list(1, make_arg(handle)), m, L"Closes a file handle. See (help read-file).");
 
-    internify(L"read-character", &read_char_fn, list(1, make_arg(handle)), m, L"");
-
-
+    internify(L"read-character", &read_char_fn, list(1, make_arg(handle)), m, L"Reads a character from a file handle. Don't use this; use (first file) and (rest file).");
 
 
-    internify(L"whitespace-p", &whitespacep_fn, list(1, make_arg(char)), m, L"");
 
-    internify(L"eof-p", &eof_p_fn, list(1, make_arg(char)), m, L"");
+
+    internify(L"whitespace-p", &whitespacep_fn, list(1, make_arg(char)), m, L"Returns truw if its argument is a whitespace character.");
+
+    internify(L"eof-p", &eof_p_fn, list(1, make_arg(char)), m, L"Returns t if its argument is an end-of-file character. () otherwise.");
 
     internify(L"string-to-symbol", &string_to_symbol_fn, 
 	      list(1, make_arg(string)), 
-	      m, L"");
+	      m, L"Returns a string version of a symbol.");
 
     internify(L"symbol-to-string", &symbol_to_string_fn, 
 	      list(1, make_arg(sym)), 
-	      m, L"");
+	      m, L"Returns a symbol named from a string. This will work with whitespace --- so be careful!");
      
     internify(L"string-to-number", &string_to_number_fn, 
 	      list(1, make_arg(string)), 
-	      m, L"");
+	      m, L"Returns a number given a string of digits.");// TODO this is not necessary.
 
     internify(L"character-p", &character_p_fn, 
 	      list(1, make_arg(character)), 
-	      m, L"");
+	      m, L"Returns t if the singal argument is a character. () otherwise.");
 
 
 
 
-     internify(L"plus", &plus_fn, list(2, make_arg(a), make_arg(b)), m, L"");
+     internify(L"plus", &plus_fn, list(2, make_arg(a), make_arg(b)), m, L"Adds two numbers.");
 
-     internify(L"minus", &minus_fn, list(2, make_arg(a), make_arg(b)), m, L"");
+     internify(L"minus", &minus_fn, list(2, make_arg(a), make_arg(b)), m, L"Subtracts two numbers");
 
-     internify(L"multiply", &multiply_fn, list(2, make_arg(a), make_arg(b)), m, L"");
+     internify(L"multiply", &multiply_fn, list(2, make_arg(a), make_arg(b)), m, L"Multiplies two numbers.");
 
-     internify(L"divide", &divide_fn, list(2, make_arg(a), make_arg(b)), m, L"");
+     internify(L"divide", &divide_fn, list(2, make_arg(a), make_arg(b)), m, L"Divides two numbers.");
 
-     internify(L">", &greater_fn, list(2, make_arg(a), make_arg(b)), m, L"");
+     internify(L">", &greater_fn, list(2, make_arg(a), make_arg(b)), m, L"Returns t if the first argument is a number and is larger than the second argument. () otherwise.");
 
-     internify(L"<", &less_fn, list(2, make_arg(a), make_arg(b)), m, L"");
+     internify(L"<", &less_fn, list(2, make_arg(a), make_arg(b)), m, L"Returns t if the first argument is a number and is smaller than the second argument. () otherwise.");
 
      /*
-     internify(L"load-library", &load_library_fn, list(1, make_arg(name)), m, L"");
+     internify(L"load-library", &load_library_fn, list(1, make_arg(name)), m, n"");
 
      internify(L"load-library-object", 
 	       &load_library_object_fn, 
