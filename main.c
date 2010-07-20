@@ -20,6 +20,7 @@
 #include "strings.c"
 #include "memory.c"
 #include "parsing.c"
+#include "symbol_table.c"
 
 void interact_parse(machine *m)
 {

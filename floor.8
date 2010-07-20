@@ -1,8 +1,3 @@
-(set! sup (set-info '((q) (oif (is q 1) poo (sup (minus q 1)))) 
- 	   (cons (cons 'function-name 
- 		       (cons 'sup ())))))
-
-
 # unlambda, leak-all, and fn exist because of the fiddly nature of
 # closures in eight. If a symbol that is used in the lambda-list has
 # already been bound, that closure ends up being a more immediate
@@ -11,6 +6,7 @@
 # leak all the symbols in the lambda list. Before that can be done,
 # ..., ', and optional arguments must be stripped. Unlambda does the
 # stripping.
+
 (set! unlambda 
       '((list)
 	  (oif list 
@@ -341,7 +337,8 @@ The ten thousand things unshatter
 the film of an explosion
 played in reverse.
 
-error: I tried to take the first element of something I don't know how to take the first element of:" xs))))
+error: I tried to take the first element of something I don't know how
+to take the first element of:" xs))))
 
 (add-first-function (fn (xs) (cons-p xs)) (fn (xs) (car xs)))  
 
@@ -430,15 +427,20 @@ Returns
 	  (append (reverse (rest xs)) (list (first xs)))))
 
 (def replace (list replacee replacement)
+     "Replaces every occurance of an item in a list; first argument
+is the list, second the item to be replace, and third the replacement."
      (oif (no list)
 	  ()
 	  (oif (is (first list) replacee)
 	       (join replacement 
 		       (replace (rest list) replacee replacement))
-	       (join (first list) 
+	       (join (first list)
 		     (replace (rest list) replacee replacement)))))
 
 (def string-first-match (string match)
+     "Returns true if the first characters of a string (that's the
+first argument!) are the same as all the characters in match (that's
+the second argument). It works for lists, too!"
      (oif (no match)
 	  t
 	  (oif (is (first string) (first match))
@@ -446,22 +448,27 @@ Returns
 	       ())))
 
 (def nth-rest (n list)
+     "Returns all elements of a list *following* the nth element."
      (oif (is n 0) 
 	  list
 	  (nth-rest (minus n 1) (rest list))))
 
 (def length (list (n 0))
+     "Returns the length of a list."
      (oif list
 	  (length (rest list) (plus n 1))
 	  n))
 
-(def string-replace (list replacee replacement)
-     (oif (no list)
+(def string-replace (string replacee replacement)
+     "Finds all occurances in a string (the first argument) of
+replacee (a string, and the second argument), with replacement (also a
+string, and the third)."
+     (oif (no string)
 	  ()
-	  (oif (string-first-match list replacee)
+	  (oif (string-first-match string replacee)
 	       (append replacement 
-		       (string-replace (nth-rest (length replacee) list) 
+		       (string-replace (nth-rest (length replacee) string) 
 				replacee 
 				replacement))
-	       (join (first list) 
-		     (string-replace (rest list) replacee replacement)))))
+	       (join (first string) 
+		     (string-replace (rest string) replacee replacement)))))

@@ -209,6 +209,24 @@ void intern_builtin_functions(machine *m)
 
      internify(L"<", &less_fn, list(2, make_arg(a), make_arg(b)), m, L"Returns t if the first argument is a number and is smaller than the second argument. () otherwise.");
 
+
+
+
+     internify(L"symbol-table", &symbol_table_fn, nil(), m, L"Returns a new empty symbol table.");
+
+     internify(L"insert", &insert_fn, list(3, 
+					   make_arg(sym), 
+					   make_arg(val), 
+					   make_arg(table)),
+	       m, L"Inserts a new symbol/value pair into a symbol-table.");
+
+     internify(L"lookup", &lookup_fn, list(2, make_arg(sym), make_arg(table)),
+	       m, L"Returns the value associated with a symbol in the given table, or nil.");
+
+     internify(L"table-union", &table_union_fn, 
+	       list(2, make_arg(a), make_arg(b)),
+	       m, L"Returns a table containing the symbol/value pairs of both component tables --- with the first table taking precedence.");
+
      /*
      internify(L"load-library", &load_library_fn, list(1, make_arg(name)), m, n"");
 
@@ -689,6 +707,44 @@ void character_p_fn(machine *m){
     }
 }
 
+
+//--------------------------- SYMBOL TABLES --------------------------//
+
+void symbol_table_fn(machine *m)
+{
+    m->accum = new(closure);
+    m->accum->in = new(doubleref);
+    m->accum->type = DREF;
+    m->accum->in->type = TABLE;
+    m->accum->in->table = new_symbol_table();
+}
+
+void insert_fn(machine *m)
+{
+    closure* sym = get_arg(sym, m);
+    closure* val = get_arg(val, m);
+    closure* table = get_arg(table, m);
+    table_insert(sym, val, table->in->table);
+    m->accum = val;
+}
+
+void lookup_fn(machine *m)
+{
+    closure* sym = get_arg(sym, m);
+    closure* table = get_arg(table, m);
+    m->accum = table_lookup(sym, table->in->table);
+}
+
+void table_union_fn(machine *m)
+{
+    closure* a = get_arg(a, m);
+    closure* b = get_arg(b, m);
+    m->accum = new(closure);
+    m->accum->in = new(doubleref);
+    m->accum->type = DREF;
+    m->accum->in->type = TABLE;
+    m->accum->in->table = table_union(a->in->table, b->in->table);
+}
 
 
 //------------------------------- FFI --------------------------------//

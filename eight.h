@@ -34,13 +34,15 @@ typedef int symbol_id;
 typedef struct operation_struct operation;
 typedef struct frame_struct frame;
 
+typedef struct symbol_table_struct symbol_table;
 
 // Every object that will need to be garbage collected needs a type-flag. 
 typedef enum  {
     EMPTY, REFERENCE,   // These two are only used by the garbage collector,
     NIL, CONS_PAIR, NUMBER, INTERNAL,// these are traditional eight objects,
     CHARACTER, SYMBOL, CONTINUATION, 
-    BUILTIN, C_OBJECT,                // these hold references to c objects.
+    BUILTIN, C_OBJECT, TABLE,         // these hold references to c objects.
+    SYMBOL_TABLE,
     DREF,                 // All eight objects are wrapped by a DREF struct
     MACHINE_FLAG, CLOSURE_OP,                  // these are operation types
     MACHINE, FRAME, CONS_CELL                            // aaaand the rest.
@@ -137,6 +139,7 @@ typedef struct {
 	void      *builtin_fn;
 	void      *c_object;
 	machine   *mach;
+	symbol_table *table;
 	symbol_id  symbol_id;
 	wchar_t    character;
 	int        num;
@@ -157,6 +160,12 @@ struct closure_struct {
     doubleref *in;
 };
 
+struct symbol_table_struct {
+    obj_type type;
+    closure **array;
+    int size;
+    int entries;
+};
 
 //------------------------ MEMORY.C -----------------------//
 
@@ -304,6 +313,16 @@ closure *string_to_number(closure *a);
 
 closure *parse_file(FILE *file);
 
+//----------------------- SYMBOL_TABLE.C -------------------//
+
+symbol_table *new_symbol_table();
+
+void table_insert(closure *symbol, closure *value, symbol_table *table);
+
+closure *table_lookup(closure *symbol, symbol_table *table);
+
+symbol_table *table_union(symbol_table *a, symbol_table *b);
+
 //------------------ BASIC_FUNCTIONS.C -------------------//
 
 void new_basic_commands(machine *m);
@@ -369,10 +388,17 @@ void string_to_symbol_fn(machine *m);
 void symbol_to_string_fn(machine *m);
 void string_to_number_fn(machine *m);
 
+
+void symbol_table_fn(machine *m);
+void insert_fn(machine *m);
+void lookup_fn(machine *m);
+void table_union_fn(machine *m);
+
 void load_library_fn(machine *m);
 void load_library_object_fn(machine *m);
 void call_library_function_fn(machine *m);
 
 void intern_builtin_functions(machine *m);
+
 
 #endif

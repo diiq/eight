@@ -284,6 +284,7 @@ int mysizeof(void *typed)
 	 type == INTERNAL  || 	 
 	 type == CHARACTER ||
 	 type == SYMBOL    ||
+	 type == TABLE    ||
 	 type == CONTINUATION ||
 	 type == BUILTIN   || 
 	 type == C_OBJECT){
@@ -297,6 +298,8 @@ int mysizeof(void *typed)
 	  return sizeof(machine);
      } else if (type == FRAME) {
 	  return sizeof(frame);
+     } else if (type == SYMBOL_TABLE) {
+	  return sizeof(symbol_table);
      } else if (type == REFERENCE) {
 	  return ((memory_reference*)typed)->size;
      }
@@ -329,10 +332,10 @@ void free_memory(memory *a)
 {
      memory_block *temp;
      while(a->first != a->current->block){
-	  temp = a->first->next;
-	  free(a->first->this);
-	  free(a->first);
-	  a->first = temp;
+	 temp = a->first->next;
+	 free(a->first->this);
+	 free(a->first);
+	 a->first = temp;
      }
      free(a->first->this);
      free(a->first);
@@ -359,12 +362,28 @@ void collectify()
 		type == INTERNAL   || 	 
 		type == CHARACTER  ||
 		type == SYMBOL     ||
-		type == BUILTIN    || 
+		type == BUILTIN    ||
 		type == C_OBJECT) {
 	 // printf("collecting a non-reference closure\n");
 	 doubleref *it =  ((doubleref *)(location));
 	 it->info = repair_reference(it->info);
-	  
+
+     } else if 	(type == TABLE) {
+	 // printf("collecting a non-reference closure\n");
+	 doubleref *it =  ((doubleref *)(location));
+	 it->info = repair_reference(it->info);
+	 it->table = repair_reference(it->table);
+
+     } else if 	(type == SYMBOL_TABLE) {
+	 symbol_table *it =  ((symbol_table *)(location));
+	 int i;
+	 closure **tarray = calloc(it->size, sizeof(closure*));
+	 for(i=0; i<it->size; i++){
+	     tarray[i] = repair_reference(it->array[i]);
+	 }
+	 free(it->array);
+	 it->array = tarray;
+	 
      } else if (type == CONS_PAIR) {
 	 //printf("collecting a cons pair\n");
 	 doubleref *it =  ((doubleref *)(location));
