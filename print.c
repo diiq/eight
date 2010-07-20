@@ -39,11 +39,11 @@ void print_closure(closure *a)
 	 printf("v%p", a->in->obj);
      }
     
-     //  if(!nilp(a->closing)){
-     // printf("[");
-     //  print_closure(a->closing);
-     // printf("]");
-     //}
+     /*if(!nilp(a->closing)){
+	 printf("[");
+	 print_closure(a->closing);
+	 printf("]");
+	 }*/
 }
 
 void print_cons(closure *cons)
@@ -76,16 +76,17 @@ void print_cont(operation *ins)
      }
 }
 
+
 void print_frame(frame *fm)
 {
   printf("\nfn: ");
-  print_closure(fm->function);
+  print_closure(assoc(symbol(FUNCTION_NAME), fm->function->in->info));
   printf("\nnext: ");
   print_cont(fm->next);
   printf("\nscope: ");
-  print_closure(fm->scope);
+  print_closure(table_to_assoc(fm->scope));
   printf("\nrib: ");
-  print_closure(fm->rib);
+  print_closure(table_to_assoc(fm->rib));
 }
 
 void print_machine(machine *m){
@@ -96,10 +97,12 @@ void print_stack(frame *fm)
 {
     if (fm != NULL){
 	if (fm->below == NULL)
-	    printf("BASE FRAME:\n");
+	    printf("\nBASE FRAME:\n");
 	print_frame(fm);
 	printf("\n^_________________^");
 	print_stack(fm->below);
+    } else {
+	printf("\n\n\n\n");
     }
 }
       

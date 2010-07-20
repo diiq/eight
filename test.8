@@ -35,6 +35,7 @@
 (print (is (oif (' a) 3 2) 3))
 (print (is (oif () 3 2) 2))
 
+
 # elipsis args
 (print (is (car ((fn (... b) b) 3 2 3)) 3))
 (print (is (car ((fn (... (' b)) b) c a 2 q)) (' c)))

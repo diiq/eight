@@ -97,13 +97,13 @@ struct operation_struct{
 // appropriate, and the function currently being applied. Frames form
 // linked lists.
 struct frame_struct {
-    obj_type type;
-    operation   *next; 
-    closure     *rib;
-    closure     *scope;
-    closure     *signal_handler; 
-    closure     *function;
-    frame       *below;
+    obj_type      type;
+    operation    *next; 
+    symbol_table *rib;
+    symbol_table *scope;
+    closure      *signal_handler; 
+    closure      *function;
+    frame        *below;
 };
 
 // A machine contains a list of frames, the base (global) frame, and
@@ -160,9 +160,10 @@ struct closure_struct {
     doubleref *in;
 };
 
+#define INITIAL_TABLE_SIZE 50
 struct symbol_table_struct {
     obj_type type;
-    closure **array;
+    closure *array[INITIAL_TABLE_SIZE];
     int size;
     int entries;
 };
@@ -316,12 +317,11 @@ closure *parse_file(FILE *file);
 //----------------------- SYMBOL_TABLE.C -------------------//
 
 symbol_table *new_symbol_table();
-
 void table_insert(closure *symbol, closure *value, symbol_table *table);
-
 closure *table_lookup(closure *symbol, symbol_table *table);
-
 symbol_table *table_union(symbol_table *a, symbol_table *b);
+symbol_table *closing_to_table(closure *a);
+closure *table_to_assoc(symbol_table *a);
 
 //------------------ BASIC_FUNCTIONS.C -------------------//
 

@@ -148,13 +148,14 @@ closure *looker_up(closure *sym, frame *current_frame, frame *base_frame)
     // what is returned; by setting the car of
     // what is returned, you can alter the value
     // destructively.
-    //closure *local = lassoc(sym, sym->closing);
-    //if (nilp(local)) 
-    closure *local = lassoc(sym, current_frame->scope);
-    if (nilp(local))
-	local = lassoc(sym, base_frame->scope);
-    //  else if (leakedp(local))
-    //	local = looker_up(sym, current_frame->below, base_frame);
+    //closure *local = nil();//lassoc(sym, sym->closing);
+    //if (nilp(local))
+    //if (nilp(local) || leakedp(local))
+    closure *local = table_lookup(sym, current_frame->scope);
+    if (leakedp(local))
+    	local = looker_up(sym, current_frame->below, base_frame);
+    else if (nilp(local))
+	local = table_lookup(sym, base_frame->scope);
     //print_closure(local);printf("\n");
     return local;
 };
@@ -167,9 +168,7 @@ void internal_set(closure *sym,
 {
     closure *old = looker_up(sym, aframe, base_frame);
     if (nilp(old)){
-	base_frame->scope = cheap_acons(sym,
-					value,
-					base_frame->scope);
+	table_insert(sym, value, base_frame->scope);
     } else {
 	memcpy(old->in->cons->car, value, sizeof(closure));
     }
@@ -231,11 +230,23 @@ int optional_argp(closure *sym)
 
 int e_argp(closure *sym)
 {
-    if (((sym->in->type == INTERNAL) && 
-	 (sym->in->symbol_id == E_ARGUMENT)) ||
-	((sym->in->type == CONS_PAIR) &&
-	 ((second(sym)->in->type == INTERNAL) && 
-	  (second(sym)->in->symbol_id == E_ARGUMENT)))) return 1;
+    if(sym->in->type == CONS_PAIR){
+	closure *asym = cheap_car(sym);
+	if (((asym->in->type == INTERNAL) && 
+	     (asym->in->symbol_id == E_ARGUMENT)))
+	    return 1;
+	
+	asym = cheap_cdr(sym);
+	if (asym->in->type == CONS_PAIR) {
+	    asym = cheap_car(asym);
+	    if (asym->in->type == CONS_PAIR) {
+		asym = cheap_car(asym);
+		if (((asym->in->type == INTERNAL) && 
+		     (asym->in->symbol_id == E_ARGUMENT)))
+		    return 1;
+	    }
+	}
+    }
     return 0;
 }
 
@@ -300,9 +311,14 @@ operation *build_argument_chain(closure *lambda_list,
 	closure *argm;
 	if (quotep(second(lambda_list))){
 	    // if the next arg is quoted, keep the quote.
-	    argm = cons(quote(e_argument()), nil());
+	    argm = cheap_list(1, quote(cheap_list(2, e_argument(), 
+				      second(second(lambda_list)))));
 	} else {
-	    argm = cons(e_argument(), nil());
+	    argm = cheap_list(1, list(2, e_argument(), second(lambda_list)));
+	}
+	if(DEBUG) {
+	    printf("beginning the building e arg.");
+	    print_closure(argm);
 	}
 	if (nilp(arg_list)){
 	    return build_argument_chain(nil(),
@@ -337,6 +353,7 @@ operation *build_argument_chain(closure *lambda_list,
 	// just check for e-arg and if it's present, DON'T shrink the
 	// lambda list until there are no more arguments in arg_list.
 	if (e_argp(car(lambda_list)) && !nilp(cdr(arg_list))){
+	    if(DEBUG) printf("building e arg.");
 	    return build_argument_chain(lambda_list,
 					cdr(arg_list),
 					make_arg(car(lambda_list),
@@ -439,15 +456,19 @@ closure *find_free_variables(closure *code,
 
 closure *enclose(closure *code, frame *current_frame, frame* base_frame)
 {
-    //     printf("I'm closing over ");
-    //    print_closure(code);
-    //printf(":\n");
     closure *ret = copy_closure(code);
     ret->closing = find_free_variables(code, 
 				       current_frame,
 				       base_frame, 
 				       nil());
-    //printf("and the result is\n"); print_closure(ret->closing); printf("\n\n");
+    /* if(!nilp(ret->closing)){ */
+    /* 	printf("I'm closing over "); */
+    /* 	print_closure(code); */
+    /* 	printf(":\n"); */
+    /* 	printf("and the result is\n"); 
+	print_closure(ret->closing); 
+	printf("\n\n"); */
+    /* } */
     return ret;
 };
 
@@ -505,8 +526,8 @@ frame *new_frame(frame *below)
     frame *ret = new(frame);
     ret->type = FRAME;
     ret->below = below;
-    ret->scope = nil();
-    ret->rib = nil();
+    ret->scope = new_symbol_table();
+    ret->rib = new_symbol_table();
     ret->function = nil();
     return ret;
 }
@@ -531,12 +552,20 @@ void print_info(machine *m)
 frame *tail_call_optimize(machine *m)
 {
     frame* n_frame;
-    closure *ascope = m->current_frame->scope;
-    closure *arib = m->current_frame->rib;
+
+    if (m->current_frame == m->base_frame){
+	n_frame = new_frame(m->current_frame);
+	m->current_frame = n_frame;
+	return n_frame;
+    }
+
+    symbol_table *ascope = m->current_frame->scope;
+    symbol_table *arib = m->current_frame->rib;
     closure *ahandler = m->current_frame->signal_handler;
     if ((m->current_frame->next == NULL) &&
 	(m->current_frame->signal_handler == NULL) &&
-    	(m->current_frame != m->base_frame)){
+    	(m->current_frame != m->base_frame) &&
+    	(m->current_frame->below != m->base_frame)){
     	while ((m->current_frame->below->next == NULL) &&
 	       (m->current_frame->below->signal_handler == NULL) &&
     	       (m->current_frame->below != m->base_frame)){
@@ -544,11 +573,13 @@ frame *tail_call_optimize(machine *m)
 	}
     	n_frame = m->current_frame;
 	n_frame->signal_handler = ahandler;
+	n_frame->rib = arib;
+	n_frame->scope = ascope;
+
     } else {
  	n_frame = new_frame(m->current_frame);
     }
-    n_frame->rib = arib;
-    n_frame->scope = ascope;
+
     m->current_frame = n_frame;
     return n_frame;
 }
@@ -596,9 +627,12 @@ int virtual_machine_step(machine *m)
 	} else if (instruction->closure->in->type == SYMBOL){
 	    // A symbol should be looked up, and the result placed in 
 	    // accum. If it is undefined, a signal should be thrown.
-	    closure *res =  looker_up(instruction->closure,
-				      m->current_frame, 
-				      m->base_frame);
+	    closure *res = lassoc(instruction->closure, 
+				  instruction->closure->closing);
+	    if (nilp(res) || leakedp(res))
+		res = looker_up(instruction->closure,
+				m->current_frame, 
+				m->base_frame);
 	    if (nilp(res)) {
               //print_info(m);
               closure *sig = build_signal(cons(string(L"\n\n\nthere's an old man in town\nwho puts his spoon in his mouth\nand he swallows\nbut there's no soup in the bowl\n\n\nerror: I attempted to look up a symbol that was undefined: "), cons(instruction->closure, nil())), m);
@@ -614,9 +648,14 @@ int virtual_machine_step(machine *m)
 	    // add a frame to insert that closing into the scope,
 	    // and then try again.
 
-	    // new frame, as if a function application
-	    tail_call_optimize(m);
 
+	    symbol_table *as;
+	    // new frame, as if a function application
+	    as = table_union(closing_to_table(instruction->closure->closing),
+			     m->current_frame->scope);
+	    	    
+	    tail_call_optimize(m);
+	    
 	    closure* sub = copy_closure(instruction->closure);
 	    sub->closing = nil();
 	    operation* cl = new(operation);
@@ -624,9 +663,7 @@ int virtual_machine_step(machine *m)
 	    cl->closure = sub;
 	    
 	    m->current_frame->next = cl;
-	    m->current_frame->scope = 
-		cheap_append(instruction->closure->closing,
-			     m->current_frame->scope);
+	    m->current_frame->scope = as;
 
 	} else if (instruction->closure->in->type != CONS_PAIR){
 	    // This test is maybe a little dangerous, because it's a
@@ -690,7 +727,11 @@ int virtual_machine_step(machine *m)
 		closure *sig = build_signal(cons(string(L"\n\n\nI am one of the ten thousand things\nbut I cannot forget that I am also an I\nso I hope and act and dream instead\n\n\nI attempted to treat something as a function, but it wasn't:"), cons(m->accum, nil())), m);
 		toss_signal(sig, m);
 	    } else {
+
+		symbol_table *as = m->current_frame->scope;
 		frame *n_frame = tail_call_optimize(m);
+		n_frame->scope = as;
+
 		n_frame->function = m->accum;
 		operation* fn=new(operation);
 		fn->type = MACHINE_FLAG;
@@ -726,17 +767,19 @@ int virtual_machine_step(machine *m)
 		// with an extra 'reverse' at the end.
 		//print_closure(m->accum);printf("\n");
 		//print_closure(m->accum->closing);printf("\n");
-		closure *last = cdr(car(m->current_frame->rib));
-		last->in->cons->car = append(car(last),
-					     cons(m->accum, nil()));
+		closure *last = table_lookup(second(instruction->closure),
+					     m->current_frame->rib);
+		table_insert(second(instruction->closure),
+			     append(car(last), cons(m->accum, nil())),
+			     m->current_frame->rib);
 		//print_closure(last->in->cons->car);printf("\n");
 		//print_closure(last->in->cons->car->closing);printf("\n");
 		//printf("\n\n");
 	    } else {
 		// If it's a normal arg, just do this.
-		m->current_frame->rib = cheap_acons(instruction->closure,
-						    m->accum,
-						    m->current_frame->rib);
+		table_insert(instruction->closure,
+			     m->accum,
+			     m->current_frame->rib);
 	    }
 
 	} else if (instruction->flag == CONTINUE_APPLY){
@@ -771,6 +814,7 @@ int virtual_machine_step(machine *m)
 	    operation* ins = fn_instructions(instruction->closure);
 	    m->current_frame->next = ins;
 	    m->current_frame->scope = m->current_frame->rib;
+	    m->current_frame->rib = new_symbol_table();
 	}
     }
     return 0;

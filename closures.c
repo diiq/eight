@@ -213,6 +213,24 @@ closure *list(int num, ...)
     return ret;
 }
 
+closure *cheap_list(int num, ...)
+{
+    va_list lis;
+    closure *rlis[num];
+    closure *ret = nil();
+    int i = 0;
+
+    va_start ( lis, num );
+    for(i=0; i<num; i++){
+	rlis[i] = va_arg ( lis, closure* );
+    }
+   
+    for(i=num-1; i>=0; i--){
+	ret = cheap_cons(rlis[i], ret);
+    }
+    return ret;
+}
+
 closure *second(closure* list)
 {
      return car(cdr(list));

@@ -386,9 +386,15 @@ closure *frame_trace(frame *f)
 {
     //    if (!nilp(f->function)){
     if (f->next){
-	return list(4, f->function, f->rib, f->scope, f->next->closure);
+	return list(4, 
+		    f->function, 
+		    table_to_assoc(f->rib), 
+		    table_to_assoc(f->scope), 
+		    f->next->closure);
     }	else {
-	return list(4, f->function, f->rib, f->scope, nil());
+	return list(4, f->function, 	
+		    table_to_assoc(f->rib), 
+		    table_to_assoc(f->scope), nil());
     }	
 	//} 
     return nil();
@@ -398,7 +404,7 @@ closure *frame_trace(frame *f)
 
 void globals_fn(machine *m)
 {
-    m->accum = m->base_frame->scope;
+    m->accum = table_to_assoc(m->base_frame->scope);
 }
 
 
@@ -481,7 +487,7 @@ void toss_signal(closure* sig, machine* m)
 	  print_info(m);
 	  m->current_frame = m->base_frame;
 	  m->accum = sig; //cdr(car(cdr(sig)));
-	  return;
+	  error();
      };
      m->current_frame = fm;
      closure *fn = m->current_frame->signal_handler;

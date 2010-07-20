@@ -15,9 +15,11 @@
 		    (cons (oif (atom-p (car list)) 
 			       (car list) 
 			       (oif (atom-p (car (car list)))
+				    # Is it a quoted arg or optional arg?
 				    (oif (is (car (car list)) '')
 					 (car (cdr (car list)))
 					 (car (car list)))
+				    # Or a quoted optional argument?
 				    (oif (is (car (car (car list))) '')
 					 (car (cdr (car (car list))))
 					 (signal "Bad lambda list!"))))
@@ -472,3 +474,4 @@ string, and the third)."
 				replacement))
 	       (join (first string) 
 		     (string-replace (rest string) replacee replacement)))))
+

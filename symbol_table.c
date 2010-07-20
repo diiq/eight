@@ -18,19 +18,16 @@ A hash-table that expands logarithmically & chains
 
 #include "eight.h"
 
-#define INITIAL_TABLE_SIZE 50
-
-
 #define start_table_iteration(table, item, i)	\
     for(i = 0; i<table->size; i++){		\
         chain = table->array[i];		\
         if(chain != NULL){		      	\
             while(!nilp(chain)){       		\
-                item = car(chain);	        \
+	    item = cheap_car(chain);		\
                 do
 
 #define end_table_iteration while(0);		\
-    chain = cdr(chain);				\
+    chain = cheap_cdr(chain);			\
             }	       				\
         }	                                \
     }
@@ -53,10 +50,9 @@ int symbol_hash(closure *symbol, symbol_table *table)
 symbol_table *new_symbol_table()
 {
     symbol_table *ret = new(symbol_table);
-    ret->type = TABLE;
     ret->size = INITIAL_TABLE_SIZE;
     ret->entries = 0;
-    ret->array = calloc(INITIAL_TABLE_SIZE, sizeof(closure *));
+    //    ret->array = calloc(INITIAL_TABLE_SIZE, sizeof(closure *));
     ret->type = SYMBOL_TABLE;
     return ret;
 }
@@ -69,10 +65,9 @@ void table_insert(closure *symbol, closure *value, symbol_table *table)
 	chain = nil();
     closure *prev = assoc(symbol, chain);
     if (!nilp(prev)){
-	printf("here.");
 	prev->in->cons->car = value;
     } else {
-	table->array[hash] = cons(list(2, symbol, value), chain);
+	table->array[hash] = cheap_cons(cheap_list(2, symbol, value), chain);
     }
     table->entries++;
 }
@@ -85,7 +80,7 @@ closure *table_lookup(closure *symbol, symbol_table *table)
     if (chain == NULL)
 	return nil();
     
-    return car(assoc(symbol, chain));
+    return assoc(symbol, chain);
 }
 
 symbol_table *table_union(symbol_table *a, symbol_table *b)
@@ -95,13 +90,45 @@ symbol_table *table_union(symbol_table *a, symbol_table *b)
     int i;
     closure *chain;			            
     start_table_iteration(b, item, i){
-	table_insert(car(item), second(item), ret);
+	if (!leakedp(cheap_cdr(item)) ||
+	    nilp(table_lookup(cheap_car(item), ret)))
+	    table_insert(cheap_car(item), second(item), ret);
     } end_table_iteration;
 
     start_table_iteration(a, item, i){
-	table_insert(car(item), second(item), ret);
+	if (!leakedp(cheap_cdr(item)) ||
+	    nilp(table_lookup(cheap_car(item), ret)))
+	table_insert(cheap_car(item), second(item), ret);
     } end_table_iteration;
     
+    return ret;
+}
+
+symbol_table *closing_to_table(closure *a)
+{
+    symbol_table *ret = new_symbol_table();
+    while(!nilp(a)){
+	if(nilp(table_lookup(cheap_car(cheap_car(a)), ret))){
+	    table_insert(cheap_car(cheap_car(a)), 
+			 second(cheap_car(a)),
+			 ret);
+	}
+	a = cheap_cdr(a);
+    }
+    return ret;
+}
+
+closure *table_to_assoc(symbol_table *a)
+{
+    closure *item;
+    int i;
+    closure *chain;			            
+    closure *ret = nil();
+    for(i = 0; i<a->size; i++){		    
+	if(a->array[i] != NULL){
+	    ret = append(ret, a->array[i]); 
+	}
+    }
     return ret;
 }
 

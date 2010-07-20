@@ -19,7 +19,7 @@
 #include "eight.h"
 
 #define BLOCK_SIZE 1048576
-#define MIN_SIZE   2
+#define MIN_SIZE   10
 //----------------------------- STRUCTURES ----------------------------//
 
 /* A memory block is a big block of memory. Astonishing, right? Memory
@@ -377,12 +377,9 @@ void collectify()
      } else if 	(type == SYMBOL_TABLE) {
 	 symbol_table *it =  ((symbol_table *)(location));
 	 int i;
-	 closure **tarray = calloc(it->size, sizeof(closure*));
 	 for(i=0; i<it->size; i++){
-	     tarray[i] = repair_reference(it->array[i]);
+	     it->array[i] = repair_reference(it->array[i]);
 	 }
-	 free(it->array);
-	 it->array = tarray;
 	 
      } else if (type == CONS_PAIR) {
 	 //printf("collecting a cons pair\n");
@@ -487,38 +484,38 @@ void print_heap(memory *a){
 }
 
 
-void test_memory(){
-// should start as 
-//machine! frame! number!5 nil! operation! symbol! cons! cell! nil! number!4 cons! cell! number!4 cons! number!2 cons! cell! number!2 cons! number!23 end of heap
+/* void test_memory(){ */
+/* // should start as  */
+/* //machine! frame! number!5 nil! operation! symbol! cons! cell! nil! number!4 cons! cell! number!4 cons! number!2 cons! cell! number!2 cons! number!23 end of heap */
 
-//ends as:
-// machine! frame! operation! cons! cell! nil! number!2 cons! cell! number!4 cons! cell! nil! end of heap
+/* //ends as: */
+/* // machine! frame! operation! cons! cell! nil! number!2 cons! cell! number!4 cons! cell! nil! end of heap */
 
-     machine *goo = init_memory();
-     goo->base_frame = new(frame);
-     closure * a = number(5);
-     goo->base_frame->type = FRAME;
-     goo->base_frame->next = new(operation);
-     a = symbol(T);
-     goo->base_frame->next->type = CLOSURE_OP;
-     goo->current_frame = goo->base_frame;
-     goo->base_frame->scope = nil();
-     goo->base_frame->rib = nil();
-     goo->base_frame->next->closure = cons(number(2), cons(number(4), cons(nil(), nil())));
-     a = number(23);
+/*      machine *goo = init_memory(); */
+/*      goo->base_frame = new(frame); */
+/*      closure * a = number(5); */
+/*      goo->base_frame->type = FRAME; */
+/*      goo->base_frame->next = new(operation); */
+/*      a = symbol(T); */
+/*      goo->base_frame->next->type = CLOSURE_OP; */
+/*      goo->current_frame = goo->base_frame; */
+/*      goo->base_frame->scope = nil(); */
+/*      goo->base_frame->rib = nil(); */
+/*      goo->base_frame->next->closure = cons(number(2), cons(number(4), cons(nil(), nil()))); */
+/*      a = number(23); */
 
-     printf("one!\n");
-     print_machine(goo);
-     print_heap(memory_a);
-     printf("two!\n");
-     goo = collect();
-     print_machine(goo);
-     print_heap(memory_a);
-     printf("three!\n");
-     goo = collect();
-     print_machine(goo);
-     print_heap(memory_a);
-}
+/*      printf("one!\n"); */
+/*      print_machine(goo); */
+/*      print_heap(memory_a); */
+/*      printf("two!\n"); */
+/*      goo = collect(); */
+/*      print_machine(goo); */
+/*      print_heap(memory_a); */
+/*      printf("three!\n"); */
+/*      goo = collect(); */
+/*      print_machine(goo); */
+/*      print_heap(memory_a); */
+/* } */
 
 
 #endif
