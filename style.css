@@ -1,15 +1,15 @@
 td {border:1px solid #000; background-color:#fff;}
 tr { height:25%}
 table { width:100%; height:100%}
-body {height:100%;background-color:#fb3}
+body { height:100%;background-color:#fb3}
 .CodeMirror-line-numbers { 
-background-color: #EEE;
-color: #AAA;
-font-family: monospace;
-font-size: 10pt;
-line-height: normal;
-padding-right: 0.3em;
-padding-top: 0.4em;
-text-align: right;
-width: 2.2em; 
+    background-color: #EEE;
+    color: #AAA;
+    font-family: monospace;
+    font-size: 10pt;
+    line-height: normal;
+    padding-right: 0.3em;
+    padding-top: 0em;
+    text-align: right;
+    width: 2.2em; 
 }
