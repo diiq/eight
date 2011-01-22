@@ -1,22 +1,26 @@
-function interior(thing){
+function Interior(thing){
     this.value = thing;
     this.info = new Array();
 }
 
-function object(inner, type){
+function Object(inner, type){
     this.closing = new Array();
-    this.in = interior(inner);
+    this.in = new Interior(inner);
     this.in.info['type'] = type;
 }
 
-function frame(below, name){
+Object.prototype.type = function(){
+    return this.in.info['type'];
+};
+
+function Frame(below, name){
     this.below = below;
     this.scope = new Array();
     this.signal_handler = null;
     this.trace = name;
 }
 
-function machine(){
+function Machine(){
     this.base_frame = frame(null, "Base Frame");
     this.current_frame = this.base_frame;
     this.accum = null;
@@ -24,18 +28,26 @@ function machine(){
 
 //--------------------------------- coo.
 
-NIL = object(null, "NIL");
+nil = new Object(null, "nil");
 
-function cons_cell(car, cdr){
+function Cons_cell(car, cdr){
     this.car = car;
     this.cdr = cdr;
 }
 
 function cons_pair(car, cdr){
-    object(cons_cell(car, cdr), "cons");
+    return new Object(new Cons_cell(car, cdr), "cons");
 }
 
 function symbol(name){
-    return object(name, "symbol");
+    return new Object(name, "symbol");
+}
+
+function cheap_list() {
+    var ret = nil;
+    for (var i=arguments.length-1; i>=0; i--){
+	ret = cons_pair(arguments[i], ret);
+    }
+    return ret;
 }
 

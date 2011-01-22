@@ -35,3 +35,7 @@ $(document).ready(function(){
 	unmarkParen: function(span) {removeClass(span, "good-matching-paren"); removeClass(span, "bad-matching-paren");}
     });
  });
+
+function execute(str){
+    
+}
