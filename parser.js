@@ -60,12 +60,15 @@ function parse(tokens) {
     } else if (token[0] == ","){
 	tokens.push(token.substr(1, token.length));
 	return list(symbol(","), parse(tokens));
-    } else if (token[0] == "$"){
-	return new Character(token[1]);
-    } else if (token[0] == "\""){
-	return estring(token.substr(1, token.length));
-    } //else if (token.match(/^[\d\-\.]+$/)){
-    //	return new Number(parseFloat(token));
+    }
+    // else if (token[0] == "$"){
+    // return new Character(token[1]);
+    // }
+    // else if (token[0] == "\""){
+    // return estring(token.substr(1, token.length));
+    // }
+    // else if (token.match(/^[\d\-\.]+$/)){
+    // return new Number(parseFloat(token));
     // }
     else {
 	return symbol(token);
@@ -78,7 +81,7 @@ function parse_list(tokens) {
 	lis.push(parse(tokens));
     }
     tokens.pop();
-    return cheap_list.apply(this, lis);
+    return list.apply(this, lis);
 }
 
 //------------------------- Unparsing -------------------------//
