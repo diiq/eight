@@ -30,7 +30,7 @@ function Frame(below, name){
     this.below = below;
     this.next = nil;
     this.scope = new Array();
-    this.new_scope = new Array();
+    this.rib = new Array();
     this.signal_handler = null;
     this.trace = name;
 }
@@ -150,7 +150,7 @@ function car(x){
 	return nil;
     }
     var ret = cheap_car(x).copy();
-    ret.bindings[sym] = union_bindings(x.bindings, ret.bindings);
+    ret.bindings = union_bindings(x.bindings, ret.bindings);
     return ret;
 }
 
@@ -159,7 +159,7 @@ function cdr(x){
 	return nil;
     }
     var ret = cheap_cdr(x).copy();
-    ret.bindings[sym] = union_bindings(x.bindings, ret.bindings);
+    ret.bindings = union_bindings(x.bindings, ret.bindings);
     return ret;
 }
 
@@ -201,7 +201,7 @@ function look_up(sym, m){
     var ret;
 
     if (sym.in.value in sym.bindings){ // check in the local closing
-	ret = sym.bindings[sym];
+	ret = sym.bindings[sym.in.value];
     } else {
 	ret = leaked();
     }
@@ -209,11 +209,12 @@ function look_up(sym, m){
     var current_frame = m.current_frame;
 
     while(leakedp(ret)){  // in the current frame (and below)
-	ret = current_frame.scope[sym];
+	ret = current_frame.scope[sym.in.value];
 	current_frame = current_frame.next;
     }
+
     if (ret == undefined){ // and in the base frame.
-	ret = m.base_frame.scope[sym];
+	ret = m.base_frame.scope[sym.in.value];
     }
 
     if (ret == undefined){
@@ -237,38 +238,45 @@ function set(sym, val, m){
 
 //-------- machine shit -----------------//
 
+function asterixp(x){
+    return false;
+}
 
-// This will get a bit evil when optional args come into play.
+function atpendp(x){
+    return false;
+}
+
+// Also, DESPERATELY need to add elipsis args.
 function argument_chain(lambda_list, arg_list, chain){
-    var lambda = car(lambda_list);
-    if (lambda.type() == cons){
-	var name = car(lambda);
-	var func = car(cdr(lambda));
-    } else {
-	var name = lambda;
-	var func = null;
+    if (lambda_list.type() == "nil"){
+	return chain;
     }
+
+    var last;
+    var ret;
     var arg = car(arg_list);
     if (asterixp(arg)){
-		   return Operation(
-		       Operation(chain,
-			   list(lambda_list, arg_list),
-			   "asterpend_continue"),
-		       arg,
-		       "");
-
+	last = new Operation(chain,
+			     list(lambda_list, cdr(arg_list)),
+			     "asterpend_continue");
+	ret = new Operation(last, arg, "evaluate");
     } else if (atpendp(arg)){
-		   return Operation(
-		       Operation(chain,
-			   list(lambda_list, arg_list),
-			   "atpend_continue"),
-		       arg,
-		       "");
+	last = new Operation(chain, list(lambda_list, cdr(arg_list)), "atpend_continue");
+	ret = new Operation(last, arg, "evaluate");
     } else {
-	return Operation(Operation(chain, name, "argument"),
-			 list(func, arg),
-			 "");
+
+	var name, func, lambda = car(lambda_list);
+	if (lambda.type() == cons){
+	    name = car(lambda);
+	    func  = list(car(cdr(lambda)), arg);
+	} else {
+	    name = lambda;
+	    func = arg;
+	}
+	last = new Operation(chain, list(cdr(lambda_list), cdr(arg_list)), "continue");
+	ret = new Operation(new Operation(last, name, "argument"), func, "evaluate");
     }
+    return ret;
 }
 
 function machine_step(m){
@@ -288,17 +296,18 @@ function machine_step(m){
 
     m.current_frame.next= instruction.next;
 
-    if (instruction.flag == ""){
-
-	if (instruction.type() == "builtin"){
+    if (instruction.flag == "evaluate"){
+	if (instruction.instruction.type() == "builtin"){
 	    instruction.in.value();
 
-	} else if (instruction.type() == "continuation"){
+	} else if (instruction.instruction.type() == "continuation"){
 	    alert("No continuations yet, sweetums.");
 	    //ignored for now
 
 	} else if (instruction.instruction.type() == "symbol") {
-	    m.accum = car(look_up(instruction.instruction));
+	    //alert("here");
+	    //alert(stringify(car(look_up(instruction.instruction, m))));
+	    m.accum = car(look_up(instruction.instruction, m));
 	    if (m.accum == nil){
 		//signal
 		alert("thass no' a symbol, lassie");
@@ -312,17 +321,59 @@ function machine_step(m){
 	    nex.bindings = new Array();
 	    m.current_frame.next = new Operation(m.current_frame.next,
 						 nex,
-						 "");
+						 "evaluate");
 
 	} else if (car(instruction.instruction).type() == "symbol" &&
 		   car(instruction.instruction).in.value == "clear") {
-	    m.accum = instruction.instruction;
+	    m.accum = car(cdr(instruction.instruction));
 
-	// Strings would go here, when the go here.
+	// Strings will go here, when they go here.
 	} else {
-
+	    m.current_frame = new Frame(m.current_frame, "funcall");
+	    m.current_frame.scope = m.current_frame.below.scope;
+	    m.current_frame.next = new Operation(
+		new Operation(
+		    m.current_frame.next,
+		    cdr(instruction.instruction),
+		    "apply"),
+		car(instruction.instruction),
+		"evaluate");
 	    // function application will go here.
 	}
+    } else {
+	// So we must be dealing with a fancy flag.
+	if (instruction.flag == "apply"){
+	    m.current_frame.next = new Operation(m.current_frame.next,
+						 cdr(m.accum),
+						 "do");
+	    m.current_frame.next = argument_chain(car(m.accum),
+						  instruction.instruction,
+						  m.current_frame.next);
 
+	} else if (instruction.flag == "continue"){
+	    m.current_frame.next = argument_chain(car(instruction.instruction),
+						  car(cdr(instruction.instruction)),
+						  m.current_frame.next);
+
+	} else if (instruction.flag == "asterpend_continue"){
+	    m.current_frame.next = argument_chain(
+		car(instruction.instruction),
+		append(m.accum, car(cdr(instruction.instruction))),
+		m.current_frame.next);
+
+	} else if (instruction.flag == "atpend_continue"){
+
+	} else if (instruction.flag == "argument"){
+	    m.current_frame.rib[instruction.instruction.in.value] = list(m.accum);
+
+	} else if (instruction.flag == "do") {
+	    m.current_frame.scope = m.current_frame.rib;
+	    m.current_frame.next = new Operation(m.current_frame.next,
+						 car(instruction.instruction),
+						 "evaluate");
+	}
     }
+    return 0;
 }
+
+

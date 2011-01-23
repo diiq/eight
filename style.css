@@ -1,7 +1,11 @@
 td {border:1px solid #000; background-color:#fff;}
 tr { height:25%}
 table { width:100%; height:100%}
-body { height:100%;background-color:#fb3}
+body { height:100%;
+       background-color:#fb3;
+       font-family: monospace;
+       font-size: 10pt;
+       line-height: normal;}
 .CodeMirror-line-numbers { 
     background-color: #EEE;
     color: #AAA;

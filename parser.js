@@ -87,6 +87,41 @@ function parse_list(tokens) {
 //------------------------- Unparsing -------------------------//
 
 function stringify(x){
+    if (!x){
+	return "NULL";
+    } else if (x instanceof EObject){
+	return stringify_eobject(x);
+    } else if (x instanceof Operation){
+	return stringify_operation(x);
+    } else if (x instanceof Frame){
+	return stringify_frame(x);
+    } else {
+	alert("I don't know how to stringigy that.");
+	return "STRINGIFY ERR";
+    }
+}
+
+function stringify_frame(x){
+    if (!x) {
+	return "";
+    } else {
+	return (x.trace + ", scoped as " + x.scope + "performing:\n" +
+		stringify(x.next) + "\n\n" +
+		stringify_operation(x.next));
+    }
+}
+
+
+function stringify_operation(x){
+    if (!x) {
+	return "";
+    } else {
+	return (stringify(x.instruction) + ", flagged " + x.flag +
+		"\n |-> " + stringify_operation(x.next));
+    }
+}
+
+function stringify_eobject(x){
     var type = x.type();
     if (type == "cons") {
 	return "(" + stringify_list(x) + ")";

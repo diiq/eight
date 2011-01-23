@@ -36,6 +36,28 @@ $(document).ready(function(){
     });
  });
 
+var m;
 function execute(str){
-    
+    var lamda = parse(preparse("((clear ((a b c) a)) q r s)"));
+    m = new Machine();
+    m.base_frame.scope["q"] = list(symbol("sq"));
+    m.base_frame.scope["r"] = list(symbol("sr"));
+    m.base_frame.scope["s"] = list(symbol("ss"));
+    var op = new Operation(null, lamda, "evaluate");
+    m.current_frame = new Frame(m.base_frame, "initial");
+    m.current_frame.next = op;
+    stack_trace(m);
+}
+
+function step(){
+    machine_step(m);
+    stack_trace(m);
+}
+
+function print(str){
+    return str.replace(/\n/g, "<br />");
+}
+function stack_trace(m){
+    $("#stacktrace").html(print(stringify(m.accum)) + "<br><br><br>" +
+			  print(stringify(m.current_frame)));
 }
