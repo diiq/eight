@@ -45,6 +45,10 @@ function Machine(){
 
 nil = new EObject(null, "nil");
 
+function nilp(x){
+    return (x.type() == "nil");
+}
+
 function Cons_cell(car, cdr){
     this.car = car;
     this.cdr = cdr;
@@ -96,14 +100,14 @@ function cons(car, cdr){
     var ncar = car.copy();
     var ncdr = cdr.copy();
 
-    if (car==nil){
+    if (nilp(car)){
 	var ret = cheap_cons(nil, ncdr);
 	ret.bindings = ncdr.bindings;
 	ncdr.bindings = new Array();
 	return ret;
     }
 
-    if (cdr==nil){
+    if (nilp(cdr)){
 	var ret = cheap_cons(ncar, nil);
 	ret.bindings = ncar.bindings;
 	ncar.bindings = new Array();
@@ -119,14 +123,14 @@ function cons(car, cdr){
 }
 
 function cheap_car(x){
-    if (x==nil){
+    if (nilp(x)){
 	return nil;
     }
     return x.in.value.car;
 }
 
 function cheap_cdr(x){
-    if (x==nil){
+    if (nilp(x)){
 	return nil;
     }
     return x.in.value.cdr;
@@ -146,7 +150,7 @@ function union_bindings(a, b){
 }
 
 function car(x){
-    if (x==nil){
+    if (nilp(x)){
 	return nil;
     }
     var ret = cheap_car(x).copy();
@@ -155,7 +159,7 @@ function car(x){
 }
 
 function cdr(x){
-    if (x==nil){
+    if (nilp(x)){
 	return nil;
     }
     var ret = cheap_cdr(x).copy();
@@ -181,6 +185,16 @@ function list() {
     return ret;
 }
 
+function append(x, y){
+    alert(stringify(x));
+    alert(stringify(y));
+    if (nilp(x)){
+	return y;
+    }
+    var b = append(cdr(x), y);
+    alert(stringify(b));
+    return cons(car(x), b);
+}
 //--------------- symbol binding shit --------------//
 
 
@@ -226,7 +240,7 @@ function look_up(sym, m){
 
 function set(sym, val, m){
     var oldval = look_up(sym, m);
-    if (oldval == nil){
+    if (nilp(oldval)){
 	m.base_frame.scope[sym] = list(val);
     } else {
 	oldval.in.value.car = val;
@@ -239,15 +253,29 @@ function set(sym, val, m){
 //-------- machine shit -----------------//
 
 function asterixp(x){
+    if (x.type() == "cons" &&
+	cheap_car(x).type() == "symbol" &&
+	cheap_car(x).in.value == "*"){
+	return true;
+    }
     return false;
 }
 
 function atpendp(x){
+    if (x.type() == "cons" &&
+	cheap_car(x).type() == "symbol" &&
+	cheap_car(x).in.value == "@"){
+	return true;
+    }
     return false;
 }
 
 // Also, DESPERATELY need to add elipsis args.
 function argument_chain(lambda_list, arg_list, chain){
+    alert(stringify(lambda_list));
+    alert(stringify(arg_list));
+    alert(stringify(chain));
+
     if (lambda_list.type() == "nil"){
 	return chain;
     }
@@ -259,16 +287,16 @@ function argument_chain(lambda_list, arg_list, chain){
 	last = new Operation(chain,
 			     list(lambda_list, cdr(arg_list)),
 			     "asterpend_continue");
-	ret = new Operation(last, arg, "evaluate");
+	ret = new Operation(last, car(cdr(arg)), "evaluate");
     } else if (atpendp(arg)){
 	last = new Operation(chain, list(lambda_list, cdr(arg_list)), "atpend_continue");
 	ret = new Operation(last, arg, "evaluate");
     } else {
 
 	var name, func, lambda = car(lambda_list);
-	if (lambda.type() == cons){
-	    name = car(lambda);
-	    func  = list(car(cdr(lambda)), arg);
+	if (lambda.type() == "cons"){
+	    name = car(cdr(lambda));
+	    func  = list(car(lambda), arg);
 	} else {
 	    name = lambda;
 	    func = arg;
@@ -279,7 +307,16 @@ function argument_chain(lambda_list, arg_list, chain){
     return ret;
 }
 
+function clear_list(list){
+
+}
+
+
 function machine_step(m){
+    // this is the heart of the eight machine;
+    // and if an imperative js function this long doesn't make you
+    // at least a little squeamish, you're not human.
+
     var instruction = m.current_frame.next;
 
     if (instruction == null) {   // this block returns
@@ -308,7 +345,7 @@ function machine_step(m){
 	    //alert("here");
 	    //alert(stringify(car(look_up(instruction.instruction, m))));
 	    m.accum = car(look_up(instruction.instruction, m));
-	    if (m.accum == nil){
+	    if (nilp(m.accum)){
 		//signal
 		alert("thass no' a symbol, lassie");
 	    }
@@ -323,22 +360,28 @@ function machine_step(m){
 						 nex,
 						 "evaluate");
 
-	} else if (car(instruction.instruction).type() == "symbol" &&
-		   car(instruction.instruction).in.value == "clear") {
-	    m.accum = car(cdr(instruction.instruction));
+	} else if (instruction.instruction.type() == "cons") {
 
-	// Strings will go here, when they go here.
-	} else {
-	    m.current_frame = new Frame(m.current_frame, "funcall");
-	    m.current_frame.scope = m.current_frame.below.scope;
-	    m.current_frame.next = new Operation(
+	    if (car(instruction.instruction).type() == "symbol" &&
+		car(instruction.instruction).in.value == "clear") {
+		m.accum = car(cdr(instruction.instruction));
+
+	    } else {
+		m.current_frame = new Frame(m.current_frame, "funcall");
+		m.current_frame.scope = m.current_frame.below.scope;
+		m.current_frame.next = new Operation(
 		new Operation(
 		    m.current_frame.next,
 		    cdr(instruction.instruction),
 		    "apply"),
 		car(instruction.instruction),
 		"evaluate");
-	    // function application will go here.
+	    }
+
+	} else {
+	    // It's some CRAZY type, amirite? Let's not evaluate it,
+	    // and hate it because it's different.
+	    m.accum = instruction.instruction;
 	}
     } else {
 	// So we must be dealing with a fancy flag.
@@ -356,6 +399,7 @@ function machine_step(m){
 						  m.current_frame.next);
 
 	} else if (instruction.flag == "asterpend_continue"){
+	    append(m.accum, car(cdr(instruction.instruction)));
 	    m.current_frame.next = argument_chain(
 		car(instruction.instruction),
 		append(m.accum, car(cdr(instruction.instruction))),

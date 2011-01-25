@@ -38,7 +38,7 @@ $(document).ready(function(){
 
 var m;
 function execute(str){
-    var lamda = parse(preparse("((clear ((a b c) a)) q r s)"));
+    var lamda = parse(preparse(str));
     m = new Machine();
     m.base_frame.scope["q"] = list(symbol("sq"));
     m.base_frame.scope["r"] = list(symbol("sr"));
