@@ -186,15 +186,14 @@ function list() {
 }
 
 function append(x, y){
-    alert(stringify(x));
-    alert(stringify(y));
+    // Currently possible to blow the stack.
     if (nilp(x)){
 	return y;
     }
-    var b = append(cdr(x), y);
-    alert(stringify(b));
-    return cons(car(x), b);
+    return cons(car(x), append(cdr(x), y));
 }
+
+
 //--------------- symbol binding shit --------------//
 
 
@@ -290,7 +289,7 @@ function argument_chain(lambda_list, arg_list, chain){
 	ret = new Operation(last, car(cdr(arg)), "evaluate");
     } else if (atpendp(arg)){
 	last = new Operation(chain, list(lambda_list, cdr(arg_list)), "atpend_continue");
-	ret = new Operation(last, arg, "evaluate");
+	ret = new Operation(last, car(cdr(arg)), "evaluate");
     } else {
 
 	var name, func, lambda = car(lambda_list);
@@ -307,10 +306,12 @@ function argument_chain(lambda_list, arg_list, chain){
     return ret;
 }
 
-function clear_list(list){
-
+function clear_list(x){
+    if (nilp(x)){
+	return nil;
+    }
+    return cons(list(symbol("clear"), car(x)), clear_list(cdr(x)));
 }
-
 
 function machine_step(m){
     // this is the heart of the eight machine;
@@ -399,13 +400,16 @@ function machine_step(m){
 						  m.current_frame.next);
 
 	} else if (instruction.flag == "asterpend_continue"){
-	    append(m.accum, car(cdr(instruction.instruction)));
 	    m.current_frame.next = argument_chain(
 		car(instruction.instruction),
 		append(m.accum, car(cdr(instruction.instruction))),
 		m.current_frame.next);
 
 	} else if (instruction.flag == "atpend_continue"){
+	    m.current_frame.next = argument_chain(
+		car(instruction.instruction),
+		append(clear_list(m.accum), car(cdr(instruction.instruction))),
+		m.current_frame.next);
 
 	} else if (instruction.flag == "argument"){
 	    m.current_frame.rib[instruction.instruction.in.value] = list(m.accum);
