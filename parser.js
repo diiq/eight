@@ -64,9 +64,9 @@ function parse(tokens) {
     // else if (token[0] == "$"){
     // return new Character(token[1]);
     // }
-    // else if (token[0] == "\""){
-    // return estring(token.substr(1, token.length));
-    // }
+    else if (token[0] == "\""){
+	return estring(token.substr(1, token.length));
+    }
     // else if (token.match(/^[\d\-\.]+$/)){
     // return new Number(parseFloat(token));
     // }
@@ -127,6 +127,8 @@ function stringify_eobject(x){
 	return "(" + stringify_list(x) + ")";
     } else if (type == "nil"){
 	return "()";
+    } else if (type == "string"){
+	return "\"" + x.in.value + "\"";
     } else {
 	return x.in.value;
     }

@@ -41,6 +41,7 @@ function Machine(){
     this.accum = null;
 }
 
+
 //--------------------------------- coo.
 
 nil = new EObject(null, "nil");
@@ -62,7 +63,9 @@ function symbol(name){
     return new EObject(name, "symbol");
 }
 
-
+function estring(str){
+    return new EObject(str, "string");
+}
 
 //------------- Binding algebra ----------------------//
 
@@ -271,9 +274,6 @@ function atpendp(x){
 
 // Also, DESPERATELY need to add elipsis args.
 function argument_chain(lambda_list, arg_list, chain){
-    alert(stringify(lambda_list));
-    alert(stringify(arg_list));
-    alert(stringify(chain));
 
     if (lambda_list.type() == "nil"){
 	return chain;
@@ -337,10 +337,6 @@ function machine_step(m){
     if (instruction.flag == "evaluate"){
 	if (instruction.instruction.type() == "builtin"){
 	    instruction.in.value();
-
-	} else if (instruction.instruction.type() == "continuation"){
-	    alert("No continuations yet, sweetums.");
-	    //ignored for now
 
 	} else if (instruction.instruction.type() == "symbol") {
 	    //alert("here");
@@ -416,9 +412,16 @@ function machine_step(m){
 
 	} else if (instruction.flag == "do") {
 	    m.current_frame.scope = m.current_frame.rib;
-	    m.current_frame.next = new Operation(m.current_frame.next,
-						 car(instruction.instruction),
-						 "evaluate");
+	    var temp = m.current_frame.next;
+	    var chain = m.current_frame;
+	    while(!nilp(instruction.instruction)){
+		chain.next = new Operation(m.current_frame.next,
+					   car(instruction.instruction),
+					   "evaluate");
+		chain = chain.next;
+		instruction.instruction = cdr(instruction.instruction);
+	    }
+	    chain.next = temp;
 	}
     }
     return 0;

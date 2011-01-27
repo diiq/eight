@@ -1,62 +1,34 @@
-What needs to change is adding an 'as' --- think that can be done in eight.
-Garbage collection.
-Dynamic loading
-
-Imma gonna represent closings as cons-lists, even though that's a bit gross,
-because then they easily represented from the outside.
-
-assoc returns nil on no result!
-
-
-OK, if any of your gc'd structures are smaller than three pointers, you'll fuck up, because the reference will be bigger than the object. Remember that.
-
-
-
-Parser: Handle positive integers, no more. Fancy number read-macros can come later.
-
-Strings. Comments. 
-
-So I need a newline test, a whitespace test, alpha, num, and char equality.
-
-ISSUES TO ADD (7/12)
-
-Stack trace is less informative with string TCO. What do?
-Looker-up is MUCH slower with strong TCO. Intuition is that scopes are bigger.
-
 
 missing from test.8 is coverage for:
 atpend
 empty elipsis args
-stacked disposable frames (of course not!)
 
 
-quote as fn
-prmachine
+Okey dokes. For me to be happy with the web implementation, I want:
 
-stack trace
-closing-of
-maths
-
-chars
-read-file
-set-car
-set-cdr
-
-string-to-symbol
-
-string
+elipsis args
+a way to insert functions
+continuations
+signals
 
 
+builtins:
+call/cc
+signal
+set
+setinfo
+info
+cons
+car
+cdr
+oif
+leak
+quote
 
-Thoughts: can we take on a killer whale and eat its heart?
-Can we save the core having created it once? Reading a heap back in but on an offset? Hmmm. I am not totally comfortable with this; fixing the pointers seems like it would be a bit goofy. 
+I think I can do that by the end of the week.
+
+Longer term:
+O man a real, read-macro-capable parser would be the UNBEATABLE. 
+ 
 
 
-
-Problems with symbol tables:
-must change closings too
-e-arg needs to know its symbol
-
-
-
-YOU DON'T NEED TO UNION ON THE BASE FRAME K?
