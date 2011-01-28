@@ -105,12 +105,23 @@ function stringify_frame(x){
     if (!x) {
 	return "";
     } else {
-	return (x.trace + ", scoped as " + x.scope + "performing:\n" +
+	return (x.trace +
+		", scoped as " + stringify_scope(x.scope) +
+		"\n ribbed as " + stringify_scope(x.rib) +
+		"\n performing:\n" +
 		stringify(x.next) + "\n\n" +
-		stringify_operation(x.next));
+		stringify_operation(x.next)) +
+		"\n\n" + stringify_frame(x.below);
     }
 }
 
+function stringify_scope(x){
+    var ret = "";
+    for (var a in x){
+	ret += "\n" + a + " -> " + stringify(x[a]);
+    }
+    return ret;
+}
 
 function stringify_operation(x){
     if (!x) {

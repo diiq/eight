@@ -6,7 +6,6 @@ empty elipsis args
 
 Okey dokes. For me to be happy with the web implementation, I want:
 
-elipsis args
 a way to insert functions
 continuations
 signals

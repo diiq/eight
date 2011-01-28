@@ -272,6 +272,11 @@ function atpendp(x){
     return false;
 }
 
+function elipsisp(x){
+    return (x.type()=="symbol" &&
+	    x.in.value == "...");
+}
+
 // Also, DESPERATELY need to add elipsis args.
 function argument_chain(lambda_list, arg_list, chain){
 
@@ -290,9 +295,20 @@ function argument_chain(lambda_list, arg_list, chain){
     } else if (atpendp(arg)){
 	last = new Operation(chain, list(lambda_list, cdr(arg_list)), "atpend_continue");
 	ret = new Operation(last, car(cdr(arg)), "evaluate");
-    } else {
 
+    } else {
 	var name, func, lambda = car(lambda_list);
+	var flag = "argument";
+
+	if (elipsisp(lambda)) {
+	    if (nilp(arg_list)) {
+		return chain;
+	    }
+	    lambda = car(cdr(lambda_list));
+	    lambda_list = cons(nil, lambda_list);
+	    flag = "e_argument";
+	}
+
 	if (lambda.type() == "cons"){
 	    name = car(cdr(lambda));
 	    func  = list(car(lambda), arg);
@@ -301,7 +317,7 @@ function argument_chain(lambda_list, arg_list, chain){
 	    func = arg;
 	}
 	last = new Operation(chain, list(cdr(lambda_list), cdr(arg_list)), "continue");
-	ret = new Operation(new Operation(last, name, "argument"), func, "evaluate");
+	ret = new Operation(new Operation(last, name, flag), func, "evaluate");
     }
     return ret;
 }
@@ -409,6 +425,16 @@ function machine_step(m){
 
 	} else if (instruction.flag == "argument"){
 	    m.current_frame.rib[instruction.instruction.in.value] = list(m.accum);
+
+	} else if (instruction.flag == "e_argument"){
+	    var sym = instruction.instruction.in.value;
+	    if (sym in m.current_frame.rib){
+		var so_far = m.current_frame.rib[sym];
+		so_far = append(car(so_far), list(m.accum));
+		m.current_frame.rib[sym] = list(so_far);
+	    } else {
+		m.current_frame.rib[sym] = list(list(m.accum));
+	    }
 
 	} else if (instruction.flag == "do") {
 	    m.current_frame.scope = m.current_frame.rib;
