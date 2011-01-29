@@ -35,12 +35,20 @@ function Frame(below, name){
     this.trace = name;
 }
 
+
 function Machine(){
-    this.base_frame = new Frame(null, "Base Frame");
+    this.base_frame = new Frame(null, symbol("base-frame"));
     this.current_frame = this.base_frame;
     this.accum = null;
 }
 
+function copy_scope(x){
+    var ret = new Array();
+    for (var a in x){
+	ret[a] = list(car(x[a]));
+    }
+    return ret;
+}
 
 //--------------------------------- coo.
 
@@ -153,6 +161,10 @@ function union_bindings(a, b){
 }
 
 function car(x){
+    if (!(x.in.value instanceof Cons_cell)) {
+	alert("Car of a thing not consed!");
+    }
+
     if (nilp(x)){
 	return nil;
     }
@@ -162,6 +174,9 @@ function car(x){
 }
 
 function cdr(x){
+    if (!(x.in.value instanceof Cons_cell)) {
+	alert("Cdr of a thing not consed!");
+    }
     if (nilp(x)){
 	return nil;
     }
@@ -201,13 +216,14 @@ function append(x, y){
 
 
 function leaked(){
-    return list(new EObject("leak", "leak"));
+    return list(symbol("leak"));
 }
 
 function leakedp(x){
     if (x &&
 	x.type() == "cons" &&
-	cheap_car(x).type() == "leak"){
+	cheap_car(x).type() == "symbol" &&
+	cheap_car(x).in.value == "leak"){
 	return true;
     }
     return false;
@@ -243,7 +259,7 @@ function look_up(sym, m){
 function set(sym, val, m){
     var oldval = look_up(sym, m);
     if (nilp(oldval)){
-	m.base_frame.scope[sym] = list(val);
+	m.base_frame.scope[sym.in.value] = list(val);
     } else {
 	oldval.in.value.car = val;
     }
@@ -352,16 +368,17 @@ function machine_step(m){
 
     if (instruction.flag == "evaluate"){
 	if (instruction.instruction.type() == "builtin"){
-	    instruction.in.value();
+	    instruction.instruction.in.value(m);
 
 	} else if (instruction.instruction.type() == "symbol") {
 	    //alert("here");
 	    //alert(stringify(car(look_up(instruction.instruction, m))));
-	    m.accum = car(look_up(instruction.instruction, m));
-	    if (nilp(m.accum)){
+	    var ret  = look_up(instruction.instruction, m);
+	    if (nilp(ret)){
 		//signal
-		alert("thass no' a symbol, lassie");
+		alert("thass no' a symbol, lassie: " + stringify(instruction.instruction));
 	    }
+	    m.accum = car(ret);
 
 	} else if (!empty_binding_p(instruction.instruction.bindings)){
 	    m.current_frame.scope = union_bindings(
@@ -380,7 +397,8 @@ function machine_step(m){
 		m.accum = car(cdr(instruction.instruction));
 
 	    } else {
-		m.current_frame = new Frame(m.current_frame, "funcall");
+		var name = instruction.instruction;
+		m.current_frame = new Frame(m.current_frame, name);
 		m.current_frame.scope = m.current_frame.below.scope;
 		m.current_frame.next = new Operation(
 		new Operation(
@@ -453,4 +471,159 @@ function machine_step(m){
     return 0;
 }
 
+
+function copy_frame(x) {
+    var below;
+    if (x.below){
+	below = copy_frame(x.below);
+    } else {
+	return x;
+    }
+
+    var ret = new Frame(below, x.name);
+    ret.next = x.next;
+    ret.scope = copy_scope(x.scope);
+    ret.rib = copy_scope(x.rib);
+    ret.signal_handler = x.signal_handler;
+    return ret;
+};
+
+
+function build_continuation(m){
+    var q = new Machine();
+    q.base_frame = m.base_frame;
+    q.current_frame = copy_frame(m.current_frame);
+    var ret = new EObject(q, "continuation");
+
+}
+
+function signal(m){
+
+}
+
+
+//--------------- building it in -----------------//
+
+function add_function(m, name, lambda, fn){
+    var fun = list(parse(preparse(lambda)), new EObject(fn, "builtin"));
+    fun.in.info["function-name"] = symbol(name);
+    m.base_frame.scope[name] = list(fun);
+}
+
+function get_arg(x, m){
+    return car(look_up(symbol(x), m));
+}
+
+function add_em_all(m){
+    add_function(m, "cons", "(car cdr)", function(m){
+		     var cdr =  get_arg("cdr", m);
+		     if (cdr.type() != "cons" && !nilp(cdr)){
+			 alert("warning that you should make real lists");
+		     }
+		     m.accum = cons(get_arg("car", m), cdr);
+		 });
+
+    add_function(m, "car", "(x)", function(m){
+		     var x =  get_arg("x", m);
+		     m.accum = car(x);
+		 });
+
+    add_function(m, "cdr", "(x)", function(m){
+		     var x =  get_arg("x", m);
+		     m.accum = cdr(x);
+		 });
+
+    add_function(m, "info", "(x)", function(m){
+		     var x =  get_arg("x", m);
+		     m.accum = new EObject(x.in.info, "table");
+		 });
+
+    add_function(m, "'", "((clear x))", function(m){
+		     var x =  get_arg("x", m);
+		     var temp = m.current_frame;
+		     m.current_frame = temp.below;
+		     m.accum = enclose(x, m);
+		     m.current_frame = temp;
+		 });
+
+    add_function(m, "set!", "('symbol value)", function(m){
+		     var sym =  get_arg("symbol", m);
+		     var val =  get_arg("value", m);
+		     set(sym, val, m);
+		     m.accum = val;
+		 });
+
+    add_function(m, "leak", "('symbol expression)", function(m){
+		     var sym =  get_arg("symbol", m);
+		     var val =  get_arg("expression", m);
+		     val.bindings[sym.in.value] = list(symbol("leak"));
+		     m.accum = set(sym, val, m);
+		 });
+
+    add_function(m, "atom-p", "(x)", function(m){
+		     var x =  get_arg("x", m);
+		     if (x.type() == "cons"){
+			 m.accum = nil;
+		     } else {
+			 m.accum = symbol("t");
+		     }
+		 });
+
+    add_function(m, "oif", "(test 'then 'else)", function(m){
+		     var test =  get_arg("test", m);
+		     if(!nilp(test)){
+			 m.current_frame.next = new Operation(m.current_frame.next,
+							      get_arg("then", m),
+							      "evaluate");
+		     } else {
+			 m.current_frame.next = new Operation(m.current_frame.next,
+							      get_arg("else", m),
+							      "evaluate");
+		     }
+		 });
+
+    add_function(m, "is", "(a b)", function(m){
+		     var a =  get_arg("a", m);
+		     var b =  get_arg("b", m);
+		     if (a == b ||
+			 (a.type() == b.type() &&
+			 a.in.value === b.in.value)) {
+			 m.accum = symbol("t");
+		     } else {
+			 m.accum = nil;
+		     }
+		 });
+}
+
+
+function enclose(code, m){
+    code.bindings = new Array();
+    find_free_variables(code, code.bindings, m);
+    return code;
+}
+
+function free_var_p(sym, bindings){
+    return (sym.type() == "symbol" && !(sym.in.value in bindings));
+}
+
+function find_free_variables(code, bindings, m){
+    if (free_var_p(code, bindings)){
+	var a = look_up(code, m);
+	if (!nilp(a)){
+	    bindings[code.in.value] = a;
+	}
+    } else if (code.type() == "cons") {
+	find_free_variables(car(code), bindings, m);
+	find_free_variables(cdr(code), bindings, m);
+    }
+}
+
+function init_machine(){
+    var m = new Machine();
+    m.base_frame.scope["q"] = list(symbol("sq"));
+    m.base_frame.scope["r"] = list(symbol("sr"));
+    m.base_frame.scope["s"] = list(symbol("ss"));
+    add_em_all(m);
+    return m;
+}
 

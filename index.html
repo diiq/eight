@@ -22,7 +22,7 @@
   <body> 
     <table>
       <tr>
-	<td rowspan=3>
+	<td id="editor" rowspan=3>
 	  <textarea id="code" cols="80">((clear ((a b c) a)) q r s)</textarea>
 	</td>
 	<td rowspan=2 id = "stacktrace"><p>Stack trace</p></td>
@@ -33,10 +33,11 @@
 	<td rowspan=2><p>Help</p></td>
       </tr>
       <tr>
-	<td id="out"><p>output</p></td>
+	<td><p id="output">output</p></td>
       </tr>
     </table>
 <a onclick="execute(editor.getCode())">Execute</a>
+<a onclick="load(editor.getCode())">Load</a>
 <a onclick="step()">Step</a>
   </body> 
 </html> 

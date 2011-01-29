@@ -36,15 +36,35 @@ $(document).ready(function(){
     });
  });
 
-var m;
+
+
 function execute(str){
-    var lamda = parse(preparse(str));
-    m = new Machine();
-    m.base_frame.scope["q"] = list(symbol("sq"));
-    m.base_frame.scope["r"] = list(symbol("sr"));
-    m.base_frame.scope["s"] = list(symbol("ss"));
+    var lamda = ultraparse(str);
+    if (!m){
+	m = init_machine();
+    }
     var op = new Operation(null, lamda, "evaluate");
-    m.current_frame = new Frame(m.base_frame, "initial");
+    m.current_frame = new Frame(m.base_frame, symbol("initial"));
+    m.current_frame.next = op;
+
+    while(m.current_frame.below){
+	machine_step(m);
+    }
+
+    $("#output").html(print(stringify(m.accum)));
+    stack_trace(m);
+
+}
+
+
+var m;
+function load(str){
+    var lamda = ultraparse(str);
+    if (!m){
+	m = init_machine();
+    }
+     var op = new Operation(null, lamda, "evaluate");
+    m.current_frame = new Frame(m.base_frame, symbol("initial"));
     m.current_frame.next = op;
     stack_trace(m);
 }

@@ -14,15 +14,7 @@ signals
 builtins:
 call/cc
 signal
-set
-setinfo
-info
-cons
-car
-cdr
-oif
-leak
-quote
+
 
 I think I can do that by the end of the week.
 

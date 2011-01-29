@@ -1,6 +1,9 @@
 // ------------------------------ Parsing ----------------------------//
 // This is a bit hacky, yes? TODO: come back and write a nice parser.
 
+function ultraparse(str){
+    return parse(preparse("((clear (() "+str+")))"));
+}
 function preparse(str){
     str = str.split(/\"/);
     var astr = new Array();
@@ -67,9 +70,9 @@ function parse(tokens) {
     else if (token[0] == "\""){
 	return estring(token.substr(1, token.length));
     }
-    // else if (token.match(/^[\d\-\.]+$/)){
-    // return new Number(parseFloat(token));
-    // }
+    else if (token.match(/^\-?\d+\.?\d*?$/)){
+	return new EObject(parseFloat(token), "number");
+    }
     else {
 	return symbol(token);
     }
@@ -96,20 +99,19 @@ function stringify(x){
     } else if (x instanceof Frame){
 	return stringify_frame(x);
     } else {
-	alert("I don't know how to stringigy that.");
+	alert("I don't know how to stringiy that.");
 	return "STRINGIFY ERR";
     }
 }
 
 function stringify_frame(x){
-    if (!x) {
+    if (!x.below) {
 	return "";
     } else {
-	return (x.trace +
-		", scoped as " + stringify_scope(x.scope) +
+	return (stringify(x.trace) +
+		"\n scoped as " + stringify_scope(x.scope) +
 		"\n ribbed as " + stringify_scope(x.rib) +
 		"\n performing:\n" +
-		stringify(x.next) + "\n\n" +
 		stringify_operation(x.next)) +
 		"\n\n" + stringify_frame(x.below);
     }
@@ -124,25 +126,30 @@ function stringify_scope(x){
 }
 
 function stringify_operation(x){
-    if (!x) {
+    if (x == null) {
 	return "";
     } else {
-	return (stringify(x.instruction) + ", flagged " + x.flag +
-		"\n |-> " + stringify_operation(x.next));
+	return ("|-> " + stringify(x.instruction) + ", flagged " + x.flag +
+		"\n" + stringify_operation(x.next));
     }
 }
 
 function stringify_eobject(x){
     var type = x.type();
+    var ret;
     if (type == "cons") {
-	return "(" + stringify_list(x) + ")";
+	ret = "(" + stringify_list(x) + ")";
     } else if (type == "nil"){
-	return "()";
+	ret = "()";
     } else if (type == "string"){
-	return "\"" + x.in.value + "\"";
+	ret = "\"" + x.in.value + "\"";
+    } else if (type == "builtin"){
+	ret = "BUILTIN";
     } else {
-	return x.in.value;
+	ret = x.in.value + "";
     }
+//    ret += "[" + stringify_scope(x.bindings) + "]";
+    return ret;
 }
 
 function stringify_list(x){
