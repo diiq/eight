@@ -1,28 +1,28 @@
-# TESTS! This file give essentially complete coverage of eight.c, closures.c
-# MISSING from this test set are:
-# quote (the basic command, not the machine operator)
-# prmachine
-#
-# stack trace
-# closing-of
-# math fns: < > plus minus multiply divide
-#
-# char fns: whitespace-p, etc.
-# read-file
-# set-car
-# set-cdr
-#
-# string-to-symbol
-#
-# string
-#
-# Otherwise we have complete coverage.
+(set! unlambda 
+      '((list)
+        (oif list
+             (oif (atom-p (car list))
+                  (oif (is (car list) '...)
+                       (unlambda (cdr list))
+                       (cons (car list) (unlambda (cdr list))))
+                  (cons (car (cdr (car list)))
+                        (unlambda (cdr list))))
+             ())))
 
+(set! leak-all '((list expression)
+     (oif list 
+          (leak-all (cdr list) 
+                    (leak (car list) expression))
+          expression)))
+
+(set! fn '(('lambda-list ... 'code)
+           (leak-all (unlambda lambda-list) 
+                     (cons lambda-list code))))
 # cons, car, and cdr 
 (print (is (car (cons 2 3)) 2))
-(print (is (car ((fn (b) (cons 2 b)) 3)) 2))
-(print (is (cdr ((fn (b) (cons 2 b)) 3)) 3))
-(print (is (cdr (((fn (b) (fn (a) (cons a b))) 3) 2)) 3))
+(print (is (car (((b) (cons 2 b)) 3)) 2))
+(print (is (cdr (((b) (cons 2 b)) 3)) 3))
+(print (is (cdr (((b) (fn (a) (cons a b))) 3) 2)) 3))
 
 # Scopes and leaking
 (print (is (set! a 5) 5))
