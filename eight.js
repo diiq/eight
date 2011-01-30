@@ -581,6 +581,12 @@ var eight = new function(){
 			 m.accum = val;
 		     });
 
+	add_function(m, "print", "(thing)", function(m){
+			 var val =  get_arg("thing", m);
+			 output_string(stringify(val));
+			 m.accum = val;
+		     });
+
 	add_function(m, "leak", "(symbol expression)", function(m){
 			 var sym =  get_arg("symbol", m);
 			 var val =  get_arg("expression", m);
@@ -622,6 +628,14 @@ var eight = new function(){
 			 } else {
 			     m.accum = nil;
 			 }
+		     });
+
+	add_function(m, "plus", "(a b)", function(m){
+			 var a =  get_arg("a", m);
+			 var b =  get_arg("b", m);
+			     m.accum = new EObject(a.inner.value +
+						   b.inner.value,
+						   "number");
 		     });
     }
 
@@ -698,16 +712,16 @@ var eight = new function(){
     function ultraparse(str){
 	return parse(preparse("((clear (() "+str+")))"));
     }
-    function preparse(str){
+
+    function preparse (str){
 	str = str.split(/\"/);
 	var astr = new Array();
 	for (a in str){
      	    if (a % 2 == 0){
 		astr = astr.concat(tokenize(str[a]));
      	    } else {
-		astr.push("\"" + str[a]);
+		astr.push("\"" + str[a] + "\"");
 	    }
-	    //for (a in astr){print(astr[a]);}
 	}
 	return astr.reverse();
     }
@@ -715,18 +729,18 @@ var eight = new function(){
     function tokenize(str){
 	str = str.replace(/\#.*\n/g, " ");
 
-	str = str.replace(/\'\(/g, " '[ ");
-	str = str.replace(/\@\(/g, " @[ ");
-	str = str.replace(/\*\(/g, " *[ ");
-	str = str.replace(/\,\(/g, " ,[ ");
+	str = str.replace(/\'\(/g, "'[ ");
+	str = str.replace(/\@\(/g, "@[ ");
+	str = str.replace(/\*\(/g, "*[ ");
+	str = str.replace(/\,\(/g, ",[ ");
 
 	str = str.replace(/\(/g, " ( ");
 	str = str.replace(/\)/g, " ) ");
 
-	str = str.replace(/\'\[/g, " '( ");
-	str = str.replace(/\@\[/g, " @( ");
-	str = str.replace(/\*\[/g, " *( ");
-	str = str.replace(/\,\[/g, " ,( ");
+	str = str.replace(/\'\[/g, "'( ");
+	str = str.replace(/\@\[/g, "@( ");
+	str = str.replace(/\*\[/g, "*( ");
+	str = str.replace(/\,\[/g, ",( ");
 
 	str = str.split(/\s+/);
 	var out = new Array();
@@ -745,29 +759,30 @@ var eight = new function(){
 	var token = tokens.pop();
 	if (token == "("){
 	    return parse_list(tokens);
-	} else if (token[0] == "'"){
+
+	} else if (token[0] == "'" && token.length > 1){
 	    tokens.push(token.substr(1, token.length));
 	    return list(symbol("'"), parse(tokens));
-	} else if (token[0] == "@"){
+
+	} else if (token[0] == "@" && token.length > 1){
 	    tokens.push(token.substr(1, token.length));
 	    return list(symbol("@"), parse(tokens));
-	} else if (token[0] == "*"){
+
+	} else if (token[0] == "*" && token.length > 1){
 	    tokens.push(token.substr(1, token.length));
 	    return list(symbol("*"), parse(tokens));
-	} else if (token[0] == ","){
+
+	} else if (token[0] == "," && token.length > 1){
 	    tokens.push(token.substr(1, token.length));
 	    return list(symbol(","), parse(tokens));
-	}
-	// else if (token[0] == "$"){
-	// return new Character(token[1]);
-	// }
-	else if (token[0] == "\""){
+
+	} else if (token[0] == "\""){
 	    return estring(token.substr(1, token.length));
-	}
-	else if (token.match(/^\-?\d+\.?\d*?$/)){
+
+	} else if (token.match(/^\-?\d+\.?\d*?$/)){
 	    return new EObject(parseFloat(token), "number");
-	}
-	else {
+
+	} else {
 	    return symbol(token);
 	}
     }

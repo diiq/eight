@@ -1,5 +1,5 @@
 var editor;
-
+var output_string;
 $(document).ready(
     function(){
 
@@ -68,7 +68,7 @@ $(document).ready(
 	function uiexecute(str){
 	    var ret = eight.execute(str, m);
 	    stack_trace(m);
-	    $("#output").html(print(eight.stringify(m.accum)));
+	    output_string(eight.stringify(m.accum) + "\n> ");
 	}
 
 	function uiload(str){
@@ -81,7 +81,7 @@ $(document).ready(
 	    eight.step(m);
 	    stack_trace(m);
 	    if (m.paused == true) {
-		$("#output").html(print(eight.stringify(m.accum)));
+		output_string(eight.stringify(m.accum) + "\n> ");
 	    }
 	}
 
@@ -89,7 +89,7 @@ $(document).ready(
 	    eight.continu(m);
 	    if (m.paused == true) {
 		stack_trace(m);
-		$("#output").html(print(eight.stringify(m.accum)));
+		output_string(eight.stringify(m.accum) + "\n> ");
 	    }
 	}
 
@@ -102,9 +102,14 @@ $(document).ready(
 				  print(eight.stringify(m.current_frame)));
 	}
 
+	output_string = function(x){
+	    $("#output").html($("#output").html() + print(x));
+	}
 
 
 	$.ctrl('S', uistep);
+	$.ctrl('E', uiexecute);
+	$.ctrl('K', uicontinue);
 
 	$("#exbut").click(function(){
 	    uiexecute(editor.getCode());
