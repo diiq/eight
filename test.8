@@ -18,11 +18,32 @@
 (set! fn '(('lambda-list ... 'code)
            (leak-all (unlambda lambda-list) 
                      (cons lambda-list code))))
+(set! unlambda 
+      '((list)
+        (oif list
+             (oif (atom-p (car list))
+                  (oif (is (car list) '...)
+                       (unlambda (cdr list))
+                       (cons (car list) (unlambda (cdr list))))
+                  (cons (car (cdr (car list)))
+                        (unlambda (cdr list))))
+             ())))
+
+(set! leak-all '((list expression)
+     (oif list 
+          (leak-all (cdr list) 
+                    (leak (car list) expression)) 
+          expression)))
+
+(set! fn '(('lambda-list ... 'code)
+           (leak-all (unlambda lambda-list) 
+                     (cons lambda-list code))))
+
 # cons, car, and cdr 
 (print (is (car (cons 2 3)) 2))
-(print (is (car (((b) (cons 2 b)) 3)) 2))
-(print (is (cdr (((b) (cons 2 b)) 3)) 3))
-(print (is (cdr (((b) (fn (a) (cons a b))) 3) 2)) 3))
+(print (is (car ((fn (b) (cons 2 b)) 3)) 2))
+(print (is (cdr ((fn (b) (cons 2 b)) 3)) 3))
+(print (is (cdr (((fn (b) (fn (a) (cons a b))) 3) 2)) 3))
 
 # Scopes and leaking
 (print (is (set! a 5) 5))
@@ -45,14 +66,12 @@
 (print (is (car ((fn (... b) b) *'((plus 3 4) 2 3))) 7))
 (print (is (car ((fn (... b) b) @'(plus 3 4))) 'plus))
 
-# Optional arguments
-(print (is ((fn ((b 5)) b)) 5))
-(print (is ((fn ((b 5)) b) 4) 4))
+# call/cc
 (print (is (call/cc (fn (f) (f 5) 4)) 5))
 (print (is (handle-signals (fn (q) ((car q) 6)) (signal 5)) 6))
 (print (is (handle-signals (fn (q) (car (cdr q))) (signal 5)) 5))
 (print (is (handle-signals (fn (q) 4) (signal 5)) 4))
-(print (is (handle-signals 
+(print (is (handle-signalsYeah 
 	    (fn (p) (car (cdr p)))
 	    (handle-signals (fn (q) 
 				(unhandle-signal q)) (signal 5)))

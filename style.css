@@ -1,13 +1,42 @@
-td {border:1px solid #000; background-color:#fff; padding:1em}
-#editor {padding:0px;}
+td {border:1px solid #000; background-color:#fff; padding:1em; width:25%}
 
-tr { height:25%}
-table { width:100%; height:600px;}
-body { height:100%;
+#editorb {padding:0px;
+	  margin:0px; 
+	  height:75%; 
+	  width:72.5%;
+	  background-color:#fff; 
+}
+
+#stacktraceb {padding:0px;
+	      margin:0px; 
+	      height:97.5%; 
+	      width:25%;
+	      float:right; 
+	      background-color:#fff;
+}
+
+#outputb {padding:0px;
+	  margin:0px; 
+	  height:20%; 
+	  width:72.5%;
+	  background-color:#fff;
+}
+
+#spacer {height:2.5%; 
+	 padding:0px;
+	 margin:0px;
+	text-align:center;}
+
+#code {height:100%;}
+
+html, body { height:100%;
        background-color:#fb3;
        font-family: monospace;
        font-size: 10pt;
-       line-height: normal;}
+       line-height: normal;
+	   padding:0px;
+	   margin:0px;}
+
 .CodeMirror-line-numbers { 
     background-color: #EEE;
     color: #AAA;
@@ -20,3 +49,6 @@ body { height:100%;
     width: 2.2em; 
 }
 
+p {padding:.5em;}
+
+#live {border:0px solid #fff; background-color:none; width:50%; font-family: monospace;    font-size: 10pt;}

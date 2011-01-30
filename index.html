@@ -14,31 +14,71 @@
     <script type="text/javascript"
     src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.js"></script>
 
+ <script type="text/javascript"
+	    src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.7/jquery-ui.js"></script> 
  
     <script src="eight.js" type="text/javascript"></script> 
     <script src="ui.js" type="text/javascript"></script> 
 
   </head> 
   <body> 
-    <table>
-      <tr>
-	<td id="editor" rowspan=3>
-	  <textarea id="code" cols="80">((clear ((a b c) a)) q r s)</textarea>
-	</td>
-	<td rowspan=2 id = "stacktrace"><p>Stack trace</p></td>
-      </tr>
-      <tr>
-      </tr>
-      <tr>
-	<td rowspan=2><p>Help</p></td>
-      </tr>
-      <tr>
-	<td><p id="output">><br /></p></td>
-      </tr>
-    </table>
-<a id="exbut">Execute</a>
-<a id="loadbut">Load</a>
-<a id="stepbut">Step</a>
-<a id="contbut">Continue</a>
+
+    <div id="stacktraceb"><div id="stacktrace"></div></div>
+
+    <div id="editorb"><div id="editor">
+      <textarea id="code">(set! unlambda 
+      '((list)
+        (oif list
+             (oif (atom-p (car list))
+                  (oif (is (car list) '...)
+                       (unlambda (cdr list))
+                       (cons (car list) (unlambda (cdr list))))
+                  (cons (car (cdr (car list)))
+                        (unlambda (cdr list))))
+             ())))
+
+(set! leak-all '((list expression)
+     (oif list 
+          (leak-all (cdr list) 
+                    (leak (car list) expression)) 
+          expression)))
+
+(set! fn '(('lambda-list ... 'code)
+           (leak-all (unlambda lambda-list) 
+                     (cons lambda-list code))))
+
+# cons, car, and cdr 
+(print (is (car (cons 2 ())) 2))
+(print (is (car ((fn (b) (cons 2 (cons b ()))) 3)) 2))
+(print (is (car (cdr (((fn (b) (fn (a) (cons a (cons b ())))) 3) 2))) 3))
+
+# Scopes and leaking
+(print (is (set! a 5) 5))
+(print (is ((fn ((' b)) b) a) (' a)))
+(print (is ((fn ((' b)) b) (, a)) 5))
+(print (is (is ((fn (a) a) 25) 5) ()))
+(print (is ((leak (' a) (fn (a) a)) 25) 25))
+
+#oif
+(print (is (oif (' a) 3 2) 3))
+(print (is (oif () 3 2) 2))
+
+
+# elipsis args
+(print (is (car ((fn (... b) b) 3 2 3)) 3))
+(print (is (car ((fn (... (' b)) b) c a 2 q)) (' c)))
+(print (is (car (car ((fn (... (' b)) b) (, (cons (' c) (cons (' a) ())))))) (' c)))
+
+# asterpend and atpend
+(print (is (car ((fn (... b) b) *'((plus 3 4) 2 3))) 7))
+(print (is (car ((fn (... b) b) @'(plus 3 4))) 'plus))</textarea>
+    </div></div>
+    <div id="spacer">Ctrl + <a id="exbut"><u>e</u>xecute </a>
+<a id="resetbut">c<u>l</u>ear</a>
+<a id="stepbut"><u>s</u>tep </a>
+<a id="contbut"><u>k</u>ontinue </a></div>
+    <div id="outputb"><span id="output">&gt;</span>
+  <input type="text" id="live"/></div>
+
   </body> 
 </html> 
