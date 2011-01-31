@@ -26,7 +26,8 @@
     <div id="stacktraceb"><div id="stacktrace"></div></div>
 
     <div id="editorb"><div id="editor">
-      <textarea id="code">(set! unlambda 
+      <textarea id="code">
+(set! unlambda 
       '((list)
         (oif list
              (oif (atom-p (car list))
@@ -71,7 +72,21 @@
 
 # asterpend and atpend
 (print (is (car ((fn (... b) b) *'((plus 3 4) 2 3))) 7))
-(print (is (car ((fn (... b) b) @'(plus 3 4))) 'plus))</textarea>
+(print (is (car ((fn (... b) b) @'(plus 3 4))) 'plus))
+
+
+# call/cc
+(print (is (call/cc (fn (f) (f 5) 4)) 5))
+(print (is (handle-signals (fn (q) ((car q) 6)) (signal 5)) 6))
+(print (is (handle-signals (fn (q) (car (cdr q))) (signal 5)) 5))
+(print (is (handle-signals (fn (q) 4) (signal 5)) 4))
+(print (is (handle-signals
+      (fn (p) (car (cdr p)))
+      (handle-signals (fn (q) 
+        (unhandle-signal q)) (signal 5)))
+      5))
+
+</textarea>
     </div></div>
     <div id="spacer">Ctrl + <a id="exbut"><u>e</u>xecute </a>
 <a id="resetbut">c<u>l</u>ear</a>

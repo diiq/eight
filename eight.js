@@ -497,6 +497,7 @@ var eight = new function(){
 
     function copy_frame(x) {
 	var below;
+
 	if (x.below){
 	    below = copy_frame(x.below);
 	} else {
@@ -514,14 +515,30 @@ var eight = new function(){
 
     function build_continuation(m){
 	var q = new Machine();
-	q.base_frame = m.base_frame;
-	q.current_frame = copy_frame(m.current_frame);
-	var ret = new EObject(q, "continuation");
-
+	var c_frame = copy_frame(m.current_frame);
+	var f = function(m){
+	    var val = get_arg("val", m);
+	    m.current_frame = c_frame;
+	    m.accum = val;
+	};
+	return list(list(symbol("val")), new EObject(f, "builtin"));
     }
 
-    function signal(m){
+    function signal(m, message){
+	var sig = list(build_continuation(m), message);
+	toss_signal(sig, m);
+    }
 
+    function toss_signal(signal, m){
+	m.current_frame = m.current_frame.below;
+	while(!m.current_frame.signal_handler && m.current_frame.below){
+	    m.current_frame = m.current_frame.below;
+	}
+	if (!m.current_frame.signal_handler && !m.current_frame.below){
+		alert("no goddamn signal handler!");
+	} else {
+	    m.current_frame.next = new Operation(m.current_frame.next, list(m.current_frame.signal_handler, list(symbol("clear"), signal)), "evaluate");
+	}
     }
 
 
@@ -637,6 +654,40 @@ var eight = new function(){
 						   b.inner.value,
 						   "number");
 		     });
+
+	add_function(m, "call/cc", "('function)", function(m){
+			 var a =  get_arg("function", m);
+			 m.current_frame.next = new Operation(
+			     m.current_frame.next,
+			     list(a, list(symbol("clear"),
+					  build_continuation(m))),
+			     "evaluate");
+		     });
+
+	add_function(m, "signal", "(message)", function(m){
+			 var a =  get_arg("message", m);
+			 signal(m, a);
+		     });
+	add_function(m, "handle-signals", "('function ... 'rest)", function(m){
+			 var a =  get_arg("function", m);
+			 m.current_frame.signal_handler = a;
+			 m.current_frame.next = new Operation(
+			     m.current_frame.next,
+			     get_arg("rest", m),
+			     "do");
+		    });
+	add_function(m, "base-signal-handler", "('function)", function(m){
+			 var a =  get_arg("function", m);
+			 m.base_frame.signal_handler = a;
+			 m.accum = a;
+		     });
+
+	add_function(m, "unhandle-signal", "(signal)", function(m){
+			 var a =  get_arg("signal", m);
+			 toss_signal(a, m);
+			 toss_signal(a, m);
+		    });
+
     }
 
 
@@ -777,7 +828,7 @@ var eight = new function(){
 	    return list(symbol(","), parse(tokens));
 
 	} else if (token[0] == "\""){
-	    return estring(token.substr(1, token.length));
+	    return estring(token.substr(1, token.length-1));
 
 	} else if (token.match(/^\-?\d+\.?\d*?$/)){
 	    return new EObject(parseFloat(token), "number");
@@ -814,7 +865,7 @@ var eight = new function(){
     }
 
     function stringify_frame(x){
-	if (!x.below) {
+	if (!x) {
 	    return "";
 	} else {
 	    return (stringify(x.trace) +
