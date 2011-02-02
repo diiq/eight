@@ -1,0 +1,431 @@
+(set! unlambda 
+      '((list)
+        (oif list
+             (oif (atom-p (car list))
+                  (oif (is (car list) '...)
+                       (unlambda (cdr list))
+                       (cons (car list) (unlambda (cdr list))))
+                  (cons (car (cdr (car list)))
+                        (unlambda (cdr list))))
+             ())))
+
+(set! leak-all '((list expression)
+     (oif list 
+          (leak-all (cdr list) 
+                    (leak (car list) expression)) 
+          expression)))
+
+(set! fn '(('lambda-list ... 'code)
+           (leak-all (unlambda lambda-list) 
+                     (cons lambda-list code))))
+
+
+
+# Aaand def. Where fn defines anonymous functions, def binds a
+# function to a name. TODO this should include an optional help string.
+
+(set! def (fn ('name 'lambda-list ... 'code)
+              (set! ,name 
+		    (set-info (fn ,lambda-list *code)))))
+
+(def no (x) 
+     "Returns t if x is (). Returns () otherwise."
+     (is x ()))
+
+(def assoc (key al)
+     "Assoc takes a key and a list of the form ((key1 value1) (key2
+value2) (key3 value3)). If I called assoc with the key 'key2 and the
+above list (which can be called an assoc-list or a rib), assoc will
+return (value2). Be careful, and note that this is a list of one
+element! If you want just the value, you must take (first (assoc key
+alist)).
+
+It may seem strange to return a list like this, but doing so has two
+advantages:
+
+1. If there is no corresponding value in the list, assoc returns (),
+but if the key is *bound* to (), assoc returns (()).
+
+2. If the value needs to be changed, setting the first element of the
+returned list will set the value in the original rib."
+
+  (oif (no al)
+       ()
+       (oif (is (car (car al)) key)
+	    (cdr (car al))
+	    (assoc key (cdr al)))))
+
+
+
+(set! newline "
+")
+
+(def format-assoc (scope)
+     "format-scope takes an assoc list, and formats it as
+        key -> value.
+" 
+     (oif (handle-signals (fn (a) t)
+                          (no (is ,(car (car scope)) 
+				  (car (cdr (car scope))))))
+          (print " |      " 
+		 (car (car scope)) 
+		 " -> " 
+		 (car (cdr (car scope))) newline))
+     (oif (cdr scope)
+          (format-assoc (cdr scope))))
+ 
+
+(def format-stack-trace (trace)
+     (print " V"
+	    newline 
+	    " " 
+	    (car (assoc 'function-name 
+			(get-info (car (car trace))))) 
+	    newline) 
+     (format-assoc (car (cdr (car trace))))
+     (oif (cdr trace)
+          (format-stack-trace (cdr trace))))
+
+
+(def print-stack-trace (continuation)
+     "print-stack-trace takes a continuation, and prints out the
+functions that were called (and the arguments they were called with)
+that lead up to the creation of that continuation. Try:
+
+ (print-stack-trace (call/cc indentity))
+
+This function is most frequently used when dealing with unexpected
+signals."
+     (format-stack-trace (stack-trace continuation)))
+
+
+# There! Now we're in condition to make a real base-signal-handler.
+# Signals are of the form (continuation data), and data is usually of
+# the form ("poem" other-stuff). It's OK if you use a different format
+# for the data. I like it this way though.
+
+(set-info base-signal-handler 
+          (cons (cons 'help (cons "base-signal-handler sets the behavior of eight when it encounters an unhandled signal. The default is to print a stack trace, the signal poem/message, and then the first datum sent with the signal." ())) 
+                (get-info base-signal-handler)))
+ 
+(base-signal-handler (fn (q) 
+			 (print "
+
+Oh my, I've found an unhandled signal! Here's what happened:
+")
+			 (print-stack-trace (car q))
+			 (oif (is (atom-p (car (cdr q))) ()) 
+				   (print (car (car (cdr q)))
+                                          (car (cdr (car (cdr q))))
+                                          newline)
+                                   (print "
+
+ Water does not know
+ the wrong way
+ water does not know
+
+
+I received a signal in an unconventional format. Try using the
+form (poem-message data):"
+                                          q)) ()))
+
+# There! That's it for the nitty-gritty. Now it's a matter of writing
+# enough of a language to build an elegant parser out of. The parser
+# built in C does not parse numbers, or special symbols like ' * @ and
+# ,. I suppose it could, but I'd rather build something that can make
+# read-macros look sissy.
+
+(def identity (x) 
+     "Returns argument unchanged."
+     x)              
+
+(def cons-p (x) 
+     "Returns a true-value if x is a cons-pair, and () otherwise."
+     (no (atom-p x)))
+
+(def or (arg ... 'args)
+     "Performs logical or. Returns () if and only if all arguments
+evaluate to (). Or evaluates arguments in order, and stops when it
+reaches a non-() value.
+
+Or is particularly beautiful in Eight."
+  (oif args
+      (oif arg arg (or *args))
+      arg))
+
+(def copylist (xs) 
+     "Element-wise copies a list. This is useful because
+Eight passes arguments by reference; changing part of a list can have
+unintended consequences if some sub-lists are also used
+elsewhere. Copylist can help protect against that, when such mangling
+is not in your favor."
+     (oif (no xs) () (cons (car xs)
+			   (copylist (cdr xs)))))		
+
+(def list (... args) 
+     "List creates a list of its arguments in order."
+     (copylist args))
+
+
+
+
+(def help (what-you-want-help-with)
+     "Thought you'd be clever and (help help), eh? Good for you. Help
+returns a help-string for anything that has one. You can add a help
+string to anything by adding the list ('help string) to the info-rib
+of an object. With def, it's even easier --- just add your help string
+after the lambda list:
+
+  (def foo (bar)
+         ------> HERE <------
+      (blah blah baz))
+
+ Good luck!"
+     (print newline 
+            (car (assoc 'help (get-info what-you-want-help-with))) 
+            newline) ())
+
+
+(def map1 (f xs)
+     "map1 applies a function to each element of a single list. Map is
+preferred unless speed is important. And if speed is important, why
+are you using Eight?"
+  (oif xs 
+       (cons (f (car xs)) 
+	     (map1 f (cdr xs)))))
+
+# These tests will be useful for state-transitions in the
+# parser. We're getting to it, I promise!
+
+(def newline-p (char) (is char $
+)) # Note that the $ is followed by a newline!
+# $ marks a literal character.
+
+(def open-paren-p (char) (is char $( )) #)<- unconfuses editors.
+
+(def close-paren-p (char) (is char $) ))
+
+(def doublequote-p (char) (is char $" )) #"))<- unconfuses editors.
+
+(def character-marker-p (char) (is char $$ ))
+
+(def comment-character-p (char) (is char $# ))
+
+(def backslash-p (char) (is char $\ ))
+
+(def digit-p (char) (or (is char $0)
+			(is char $1)
+			(is char $2)
+			(is char $3)
+			(is char $4)
+			(is char $5)
+			(is char $6)
+			(is char $7)
+			(is char $8)
+			(is char $9)))
+
+# First and rest are high-level versions of car and cdr.  One of the
+# benefits of using first and rest is that they are modifiable. Here,
+# I'll make them treat file-streams like strings, making the parser
+# able to parse from a file or a string with no extra work!  One
+# possible optimization for Eight is to include a real table, instead
+# of using assoc tables like this. It will be easy enough to swap out
+# backends for first and rest if and when it's necessary.
+
+(set! first-table ())
+(set! rest-table ())
+
+(def add-first-function (test function)
+     "add-first-function takes two functions. The first is a boolean
+test with one argument. When (first x) is called, if no subsequent
+test returns true, this test will be called with x as it's
+argument. If it returns true, the second function will be called with
+x as the argument, and the result returned.
+
+In this way, first can be generalized for new data types."
+     (set! first-table (cons (list test function) first-table)))
+
+(def add-rest-function (test function)
+     "add-rest-function takes two functions. The first is a boolean
+test with one argument. When (rest x) is called, if no subsequent
+test returns true, this test will be called with x as it's
+argument. If it returns true, the second function will be called with
+x as the argument, and the result returned.
+
+In this way, rest can be generalized for new data types."
+     (set! rest-table (cons (list test function) rest-table)))
+
+# It probably makes sense to generalize this process of building a
+# function out of a table of cases and actions. It will be used again
+# in the parser and elsewhere.
+
+(def inner-first (xs table)
+     (oif ((car (car table)) xs)
+	  ((car (cdr (car table))) xs)
+	  (inner-first xs (cdr table))))
+
+
+
+(def first (xs)
+     "First returns the first element of a list, string, file-stream,
+&c. It can be modified using add-first-function.
+
+ (join (first x) (rest x)) is equivalent to x."
+     (inner-first xs first-table))
+
+(def inner-rest (xs table)
+     (oif ((car (car table)) xs)
+	  ((car (cdr (car table))) xs)
+	  (inner-rest xs (cdr table))))
+
+
+(def rest (xs)
+     "rest returns all but the first element of a list, string, file-stream,
+&c. It can be modified using add-rest-function.
+
+ (join (first x) (rest x)) is equivalent to x."
+     (inner-rest xs rest-table))
+
+
+(add-first-function (fn (xs) t) (fn (xs) (signal (list "
+
+The ten thousand things unshatter
+the film of an explosion
+played in reverse.
+
+error: I tried to take the first element of something I don't know how
+to take the first element of:" xs))))
+
+(add-first-function (fn (xs) (cons-p xs)) (fn (xs) (car xs)))  
+
+(add-first-function (fn (xs) (is (car (assoc 'type
+					     (get-info (car (cdr xs)))))
+				 'stream))
+		    (fn (xs) 
+			(set-cdr xs (list (read-character (car (cdr xs)))
+					  (car (cdr xs))))
+			(car xs)))
+				
+	      
+(add-rest-function (fn (xs) t) (fn (xs) (signal (list "
+
+a man akimbo
+suddenly pulls his fist to his breast
+as he quietly accumulates
+
+error: I tried to take the rest of something I don't know how to take
+the rest of:" xs))))
+
+(add-rest-function (fn (xs) (cons-p xs)) (fn (xs) (cdr xs)))  
+
+(add-rest-function (fn (xs) (is (car (assoc 'type
+					     (get-info (car (cdr xs)))))
+				'stream))
+		   (fn (xs) 
+		       (set-cdr xs (list (read-character (car (cdr xs)))
+					 (car (cdr xs))))
+		       (cdr xs)))
+	
+(set! join cons)
+
+# Grand. From here on out, it should be first/rest/join not car/cdr/cons
+
+(def append (xs ys ... 'yss)
+     "append takes n lists and joins them. Calling
+
+ (append '(1 2 3 4 5) '(6 7 8) '(9 10))
+
+returns:
+
+ (1 2 3 4 5 6 7 8 9 10) "
+     (oif xs
+	  (join (first xs) (append (rest xs) ys *yss))
+	  (oif yss
+	       (append ys *yss)
+	       ys)))
+		
+(def pair (xs (f list))
+     "pair takes a list and an optional function. It applies the
+ function to successive pairs in the list. Because the default
+ function is 'list', calling
+
+ (pair '(1 2 3 4 5 6 7 8))
+
+returns
+
+ ((1 2) (3 4) (5 6) (7 8)) "
+
+     (oif (no xs)
+          ()
+	  (oif (no (rest xs))
+	       (list (list (first xs)))
+	       (join (f (first xs) (first (rest xs)))
+		     (pair (rest (rest xs)) f)))))
+
+
+# With is like the CL let. It uses an anomnymous function to
+# temporarily bind variables. It uses fewer parentheses, though.
+
+(def with ('parms ... 'body)
+     ((fn ,(map1 first (pair parms)) *body)
+      *(map1 (fn (x) (first (rest x))) (pair parms))))
+
+(def reverse (xs)
+     "reverse reverses the order of a list. Calling
+
+ (reverse '(1 2 3 4 5))
+
+Returns
+
+ (5 4 3 2 1)) "
+     (oif (no (rest xs))
+	  xs
+	  (append (reverse (rest xs)) (list (first xs)))))
+
+(def replace (list replacee replacement)
+     "Replaces every occurance of an item in a list; first argument
+is the list, second the item to be replace, and third the replacement."
+     (oif (no list)
+	  ()
+	  (oif (is (first list) replacee)
+	       (join replacement 
+		       (replace (rest list) replacee replacement))
+	       (join (first list)
+		     (replace (rest list) replacee replacement)))))
+
+(def string-first-match (string match)
+     "Returns true if the first characters of a string (that's the
+first argument!) are the same as all the characters in match (that's
+the second argument). It works for lists, too!"
+     (oif (no match)
+	  t
+	  (oif (is (first string) (first match))
+	       (string-first-match (rest string) (rest match))
+	       ())))
+
+(def nth-rest (n list)
+     "Returns all elements of a list *following* the nth element."
+     (oif (is n 0) 
+	  list
+	  (nth-rest (minus n 1) (rest list))))
+
+(def length (list (n 0))
+     "Returns the length of a list."
+     (oif list
+	  (length (rest list) (plus n 1))
+	  n))
+
+(def string-replace (string replacee replacement)
+     "Finds all occurances in a string (the first argument) of
+replacee (a string, and the second argument), with replacement (also a
+string, and the third)."
+     (oif (no string)
+	  ()
+	  (oif (string-first-match string replacee)
+	       (append replacement 
+		       (string-replace (nth-rest (length replacee) string) 
+				replacee 
+				replacement))
+	       (join (first string) 
+		     (string-replace (rest string) replacee replacement)))))
+

@@ -1,0 +1,13 @@
+#!/usr/bin/python
+
+from optparse import OptionParser
+from eight import *
+m = init_machine()
+
+parser = OptionParser()
+(options, args) = parser.parse_args()
+
+for arg in args:
+    f = open(arg, 'r');
+    execute(f.read(), m);
+    f.close();

@@ -1,0 +1,193 @@
+* specification
+** builtin
+*** car
+*** cdr
+*** cons
+*** quote
+*** eq
+*** if
+
+*** call/cc
+
+*** atom-p
+
+*** set!
+*** set-car
+*** set-cdr
+
+*** signal
+*** handle-signals
+*** unhandle-signal
+*** base-signal-handler
+
+*** print
+*** print-machine
+*** start-debug
+*** stack-trace
+
+*** globals
+
+*** read-file
+*** close-file
+*** read-character
+*** whitespace-p
+*** eof-p
+*** string-to-symbol
+*** symbol-to-string
+*** string-to-number
+*** character-p
+
+*** plus
+*** minus
+*** multiply
+*** divide
+*** greater-than
+*** less-than
+
+*** table
+*** itertable? or table-to-assoc
+*** insert
+*** table-union
+
+*** load-library
+*** load-library-object
+*** call-library-function
+
+*** #'s
+
+** In eight
+
+*** unlambda
+*** leak
+*** leak-all
+*** enclose
+*** string-p
+*** fn
+*** def
+
+*** no
+
+*** help
+
+
+*** format-table
+*** print-stack-trace
+*** identity
+*** cons-p
+*** or
+*** copylist
+*** map1
+
+*** newline-p
+*** open-paren-p
+*** close-paren-p
+*** doublequote-p
+*** character-marker-p
+*** comment-character-p
+*** backslash-p
+*** digit-p
+
+*** add-first-function
+*** add-rest-function
+
+*** first
+*** rest
+
+*** ANONYMOUS RECURSION?
+
+*** join
+*** append
+*** pair
+*** with
+*** replace
+*** string-replace
+*** nth-rest
+*** length
+
+
+
+
+
+
+* implementation
+** garbage collector
+*** reference counting
+Counting on set and unset; on the outside of the interpreter machine.
+
+Translating argument lists
+
+*** mark and sweep
+** argument handling
+   Like we talked about with adam; ((a b) c) means apply a to what
+   will become b,  before binding it to b.
+
+   
+** built ins
+*** car
+*** cdr
+*** cons
+*** quote
+*** eq
+*** if
+
+*** call/cc
+
+*** atom-p
+
+*** set!
+*** set-car
+*** set-cdr
+
+*** signal
+*** handle-signals
+*** unhandle-signal
+*** base-signal-handler
+
+*** print
+*** print-machine
+*** start-debug
+*** stack-trace
+
+*** globals
+
+*** read-file
+*** close-file
+*** read-character
+*** whitespace-p
+*** eof-p
+*** string-to-symbol
+*** symbol-to-string
+*** string-to-number
+*** character-p
+
+*** plus
+*** minus
+*** multiply
+*** divide
+*** greater-than
+*** less-than
+
+*** table
+*** insert
+*** table-union
+
+*** load-library
+*** load-library-object
+*** call-library-function
+
+
+* built with
+** javascript compiler
+** self-hosted compiler
+** mathlib
+** parser
+** import
+** include
+
+
+
+Memory managment
+
+
+
+allocation --- where do I allocate fromljpo
