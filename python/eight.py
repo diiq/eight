@@ -21,6 +21,9 @@ class EObject():
 	return self.inner.info['type']
 
     def copy(self):
+        if nilp(self): 
+            self.bindings = {}
+            return self
 	ret = EObject(self.inner.value, self.type())
 	ret.inner.info = self.inner.info
 	ret.bindings = self.bindings
@@ -37,9 +40,9 @@ class Operation():
 	self.flag = flag
 
 class Frame():
-    # Frames are a list of Operations in a specific scope. They stack
-    # in a linked list. Rib is just a place to put the scope that is
-    # being built, before it is being used. 
+    # Frames are a list of Operations with a specific scope. They stack
+    # in a linked list. A rib is just a place to put the scope that is
+    # being built, before it is used. 
     def __init__(self, below, name):
 	self.below = below
 	self.next = None
@@ -212,7 +215,7 @@ def append(x, y):
 
 
 def leaked():
-    # leaked just means using the symbol 'LEAKED' as a value. 
+    # leaked just means a pair using the symbol 'LEAKED' as a value. 
     return elist(symbol("LEAKED"))
 
 
@@ -334,9 +337,7 @@ def argument_chain(lambda_list, arg_list, chain):
     if aflag:
         chain = Operation(chain, name, aflag)
 
-    ret = Operation(chain, func, "evaluate")	
-
-    return ret
+    return Operation(chain, func, "evaluate")
     
 
 
@@ -370,14 +371,11 @@ def evaluate_instruction(x, m):
         m.accum = car(ret)
 
     elif x.bindings:
-        m.current_frame.scope = union_bindings(
-            m.current_frame.scope,
-            x.bindings)
         nex = x.copy()
         nex.bindings =  {}
-        m.current_frame.next =  Operation(m.current_frame.next,
-                                          nex,
-                                          "evaluate")
+        m.current_frame = Frame(m.current_frame, x)
+        m.current_frame.next = Operation(None, nex, "evaluate")
+        m.current_frame.scope = union_bindings(m.current_frame.below.scope, x.bindings)
             
     elif x.type() == "cons":
         # If the object's a list, then evaluate the first element, and
@@ -406,10 +404,9 @@ def machine_step(m):
     if (not m.current_frame.next): 
         if (m.current_frame.below != None):
             m.current_frame = m.current_frame.below
-            return
         else :
             m.paused = True
-            return    
+        return    
 
     instruction = m.current_frame.next
     m.current_frame.next = instruction.next
@@ -515,6 +512,7 @@ def toss_signal(signal, m):
                                          elist(m.current_frame.signal_handler,
                                                elist(symbol("clear"), signal)),
                                          "evaluate")
+
 
 #------------------------------ Building in built-ins -------------------------#
 
@@ -808,6 +806,7 @@ def parse_elist(tokens):
 
 #----------------------------------- Unparsing --------------------------------#
 
+# or stringifying. Choose your un-word.
 
 def stringify(x):
     if not x:
@@ -831,8 +830,8 @@ def stringify_frame(x):
                 "\n scoped as " + stringify_scope(x.scope) +
                 "\n ribbed as " + stringify_scope(x.rib) +
                 "\n performing:\n" +
-                stringify_operation(x.next) +
-                "\n\n" + stringify_frame(x.below))
+                stringify(x.next) +
+                "\n\n" + stringify(x.below))
     
     
 def stringify_scope(x):
