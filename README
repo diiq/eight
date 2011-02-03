@@ -8,156 +8,103 @@
 
 
 
-Document last modified: 7/12/2010                                      
+Document last modified: 2/2/2010                                      
 Eight 2010, a lisp by Sam Bleckley
 
 Contact me!
 Sam Bleckley
 http://diiq.org/
 stm31415@gmail.com
-405-550-3487
-
-
-Eight is a language intended to be beautiful and emotional and
-extraordinarily powerful. Speed and ease of learning are not 
-priorities. Programmers want to be magic ninjas. Eight is designed
-to do magic ninja things.
+405-AVENGING (405.283.6446)
 
 
     Gnawing on bones
     My tongue is sore from trying to get the marrow out
     I refuse to ignore the meat any longer
 
-
-Eight is intended to make metaprogramming easier. It is based on
-lisp, but with significant changes under the hood. Because it's currently
-pre-alpha, please expect nothing and be surprised when you get
-something.
-
-To install Eight, clone the repository, open a terminal and run:
-
-make
-./eight
+I intend to sculpt Eight into a beautiful and emotional and
+extraordinarily powerful programming language. I am not concerned with
+speed of execution or ease of learning. Programmers want to be magic
+ninjas. Eight lets programmers do magic ninja things.
 
 
+-------------------------------------------------------------------------------
+                             A Quick-Start Guide
 
-To see example functions in Eight, look through floor.8. I'd skip the
-first 6 or 7 functions --- they're tricksy --- but the rest of the
-file is good fodder for learning. You can also use the help function
-in the interpreter; for instance:
+I am still actively altering and developing Eight. If you seek a
+finished, capable language, you will not find one here. However, if
+you're looking to help build a language to be beautiful inside and
+out, Eight may be for you.
 
--> (help rest)
+Follow along with these examples at http://diiq.org/eight, or by
+cloning the repository and using the python implementation:
 
-Will print a help statement about the 'rest' function. If you're lucky.
+$ python/8 test.8 
 
+I built Eight for metaprogramming. In my opinion, no other language
+equals Eight in the power and simplicity of its fexprs. To understand
+why, take a look at a function definition in Eight:
 
+    (def with ('sym val ... 'body)
+         ((fn ,(list sym) *body) val))
 
+(I'll assume you've got a working knowledge of lisp --- it doesn't
+matter which one. Arc, scheme, common --- it's all the same to me.)
 
-WARNING: If you're just interested in playing around with Eight, I'd
-recommend NOT reading the rest of this document. If you want to hack
-at the source, I'd HIGHLY recommend reading the rest of this document.
+Questions to ask about this function:
 
+What does this function do?  Much like with in Arc or let in common
+lisp, this function temporarily binds a value to a variable; it might
+be used like this:
 
+(with a (+ 2 3) (print a) (* a 2))
 
---------------------------- HOW IT WORKS --------------------------
+Which would print "5" and return 10. Afterwards, a will be unbound (or
+return to the binding it had previously in this scope).
 
+How does def work?
 
-Eight is based on a re-imagining of the ancient lisp functions 
-cons, car, cdr, and quote.
+def takes three arguments: a symbol: with; a lambda list: ('sym val
+... 'body); and a body of expressions: ((fn ,(list sym) *body) val).
 
-In order to understand these changes, it's important to understand
-what a functional closure is. Check out
-http://en.wikipedia.org/wiki/Closure_(computer_science) and SICP.
+What does the ... mean?
 
-Eight stretches the idea of closures a little bit --- instead of being
-around functions, eight can close over any structure of symbols.
+The elipsis works just like &rest in common list, or a . in Arc or
+scheme: body will be bound to a list of all remaining arguments.
 
-Instead of returning its argument unevaluated (like it does in
-McCarthy's lisp), quote in Eight (') returns a closure over its
-unevaluated argument. Because this happens invisibly, it is somewhat
-hard to demonstrate. Here's a first attempt:
+Why are arguments in the lambda list quoted?
 
-    ->(set! a ((fn (func) (' (func $A $B $C))) list))
-    (func $A $B $C)
+In Eight, argument names in the lambda list can have a function
+applied to them; this is clearer if I desugar the lambda list:
 
-So, that line makes a function. The function takes another function as
-an argument. The anonymous function is called with list as it's
-argument. It returns the quoted list (func $A $B $C), and binds the
-symbol a to it. Because that list was made with ', it is a closure!
+    ((' sym) val ... (' body))
 
-    ->(closing-of a)
-    ((func ((... args) (copylist args))))
+' is a function. Before the arguments are evaluated, that function is
+applied; ' prevents the evaluation of those arguments. It also does
+more, but that's much is important to understand first: the argument
+bound to sym will not be evaluated; the argument(s) to body will not
+be evaluated. They will be passed to ', and the result will be bound.
 
-Calling closing-of returns the closing of an Eight object as an assoc
-list (a list of symbol/value pairs). ((... args) (copylist args)) is the
-signature of the list function. So that means that func is still bound
-to the list function --- but only inside (func $A $B $C). Just
-evaluateing func:
+,? *? What do they do?
 
-    ->func
+, prevents an argument from being wrapped in a function, when the
+lambda-list calls for it. fn quotes its first argument, but with has
+*already* quoted that argument. Usually, , acts as a sort of opposite
+to '.
 
-Will throw an unbound-symbol error. But evaluating a (Eight uses , for
-eval):
+* unpacks a list into arguments:
 
-    -> (, a)
-    "ABC"
+    (list *(a b c)) 
 
-$A is the character 'A' --- and a list of characters is a string. So
-calling (list $A $B $C) returns "ABC"; because func is bound to list,
-that's what we get! Hooray!
+is the same as:
 
-Once quote is altered in this way, cons, car, and cdr must be changed,
-too. For instance:
+    (list a b c)
 
-    ->(closing-of (car a))
-    ((func ((... args) (copylist args))))
-
-but 
-
-    ->(closing-of (cdr a))
-    ()
-
-Because the car of a is the symbol func, it must retain the
-environment it was made in. But the cdr of a is ($A $B $C) --- which
-contains no symbols that have been closed-over, and so the closure is
-unnecessary.
+THe behavior of *, @, and , are still in flux. I am unhappy with the
+false symmetry of , and ', and * currently hides an extra eval which
+could be dangerous.
 
 
-
--------------------------- THE INTERNALS -------------------------
-
-There are 12 files of particular interest:
-
-eight.h is the header file, and contains struct, type, and function
-declarations, along with any global variables. 
- 
-main.c declares the main() function, which initializes the machine and
-starts the interpretation of code.
-
-floor.8 contains the Eight source necessary to write a full parser in Eight. 
-
-eight.c contains the giant virtual_machine_step function, that does
-the actual work of interpreting Eight code. It also contains all the
-associated support functions.
-
-closures.c contains the functions used to create and manipulate the closures,
-the objects that eight uses in its computatifications.
-
-basic_commands.c defines and initializes the basic built-in functions
-of Eight: car, cons, cdr, read-file, and so on.
-
-memory.c holds the definition of the garbage collector.
-
-parsing.c is a parser. 
-
-strings.c contains the internal functions for string manipulation.
-
-print.c contains the internal output functions.
-
-symbols.c contains the symbol-table and associated
-symbol-transformation functions.
-
-test.8 contains a list of functions that verify the proper working of
-the Eight machine. It's a good idea to run these after changing the code;
-./eight test.8 will diagnose almost every problem I've ever had with Eight.
-
+For a more in-depth look at what Eight is, take a look at
+python/eight.py . It is a well-documented and reasonably organized
+implementation.

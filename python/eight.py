@@ -519,8 +519,7 @@ def toss_signal(signal, m):
 #------------------------------ Building in built-ins -------------------------#
 
 def add_fn(m, name, alambda, fn):
-    fun = elist(parse(preparse(alambda)),  EObject(fn, "builtin"))
-    fun.inner.info["def-name"] = symbol(name)
+    fun = elist( parse(alambda),  EObject(fn, "builtin"))
     m.base_frame.scope[name] = elist(fun)
     
 
@@ -698,15 +697,10 @@ def find_free_variables(code, bindings, m):
         find_free_variables(cdr(code), bindings, m)
 	
     
-
 def init_machine():
     m =  Machine()
-    m.base_frame.scope["q"] = elist(symbol("sq"))
-    m.base_frame.scope["r"] = elist(symbol("sr"))
-    m.base_frame.scope["s"] = elist(symbol("ss"))
     add_em_all(m)
     return m
-    
 
 
 def execute(str, m):
@@ -718,16 +712,7 @@ def execute(str, m):
     while(m.paused == False):
         machine_step(m)
 
-    return m.accum
-    
-
-def load(str, m):
-    lamda = ultraparse(str)
-    op =  Operation(None, lamda, "evaluate")
-    m.current_frame =  Frame(m.base_frame, symbol("initial"))
-    m.current_frame.next = op
-    m.paused = False
-    
+    return m
 
 def step(m):
     m.paused = False
@@ -747,8 +732,10 @@ def continu(m):
 import re
 
 def ultraparse(astr):
-    return parse(preparse("((clear (() "+astr+")))"))
+    return parse("((clear (() "+astr+")))")
 
+def parse(astr):
+    return fparse(preparse(astr))
 
 def preparse (astr):
     astr = astr.split("\"")
@@ -779,7 +766,7 @@ def tokenize(astr):
     return out
     
 
-def parse(tokens):
+def fparse(tokens):
     token = tokens.pop()
 
     if (token == "("):
@@ -787,19 +774,19 @@ def parse(tokens):
     
     elif (token[0] == "'" and len(token) > 1):
         tokens.append(token[1:])
-        return elist(symbol("'"), parse(tokens))
+        return elist(symbol("'"), fparse(tokens))
     
     elif (token[0] == "@" and len(token) > 1):
         tokens.append(token[1:])
-        return elist(symbol("@"), parse(tokens))
+        return elist(symbol("@"), fparse(tokens))
     
     elif (token[0] == "*" and len(token) > 1):
         tokens.append(token[1:])
-        return elist(symbol("*"), parse(tokens))
+        return elist(symbol("*"), fparse(tokens))
     
     elif (token[0] == "," and len(token) > 1):
         tokens.append(token[1:])
-        return elist(symbol(","), parse(tokens))
+        return elist(symbol(","), fparse(tokens))
     
     elif (token[0] == "\""):
         return estring(token[1:-1])
@@ -814,7 +801,7 @@ def parse(tokens):
 def parse_elist(tokens):
     lis = []
     while tokens[-1] != ")":
-        lis.append(parse(tokens))
+        lis.append(fparse(tokens))
     tokens.pop()
     return elist(*lis)
     

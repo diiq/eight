@@ -96,7 +96,7 @@ var eight = new function(){
 		    c[sym] = a[sym];
 		} else {
 		    newa[sym] = a[sym];
-		    newb[sym] = a[sym];
+		    newb[sym] = b[sym];
 		}
 	    } else {
 		c[sym] = a[sym];
@@ -780,18 +780,8 @@ var eight = new function(){
     function tokenize(str){
 	str = str.replace(/\#.*\n/g, " ");
 
-	str = str.replace(/\'\(/g, "'[ ");
-	str = str.replace(/\@\(/g, "@[ ");
-	str = str.replace(/\*\(/g, "*[ ");
-	str = str.replace(/\,\(/g, ",[ ");
-
-	str = str.replace(/\(/g, " ( ");
-	str = str.replace(/\)/g, " ) ");
-
-	str = str.replace(/\'\[/g, "'( ");
-	str = str.replace(/\@\[/g, "@( ");
-	str = str.replace(/\*\[/g, "*( ");
-	str = str.replace(/\,\[/g, ",( ");
+	str = str.replace(/\(/g, "( ");
+	str = str.replace(/[^*',@]\(/g, " (");
 
 	str = str.split(/\s+/);
 	var out = new Array();
