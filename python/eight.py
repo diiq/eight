@@ -1,16 +1,21 @@
-import re
+# Eight. 2/2/11 S.B.
 
 class Interior():
+    # Interiors exist to ensure one step of removal between values
+    # (which reside in Interiors) and bindings. This allows the same
+    # value to have multiple bindings.
     def __init__(self, thing):
 	self.value = thing
 	self.info = {}
 
 class EObject():
+    # Eight manipulates EObjects; all EObjects include a list of
+    # bindings, symbol to value. Usually, that list is empty. The type
+    # of an EObject is stored, with the value, in its inner.
     def __init__(self, inner, atype):
 	self.bindings = []
 	self.inner = Interior(inner)
 	self.inner.info['type'] = atype
-
 
     def type(self):
 	return self.inner.info['type']
@@ -22,12 +27,19 @@ class EObject():
 	return ret
 
 class Operation():
+    # Operations represent individual instructions to the Eight
+    # machine. They contain a link to the subsequent instruction, an
+    # EObject to be manipulated, and a flag, which is a string telling
+    # the machine what action to perform. Easy-peasy, right?
     def __init__(self, next, instruction, flag):
 	self.next = next
 	self.instruction = instruction
 	self.flag = flag
 
 class Frame():
+    # Frames are a list of Operations in a specific scope. They stack
+    # in a linked list. Rib is just a place to put the scope that is
+    # being built, before it is being used. 
     def __init__(self, below, name):
 	self.below = below
 	self.next = None
@@ -35,9 +47,13 @@ class Frame():
 	self.rib = {}
 	self.signal_handler = None
 	self.trace = name
-    
 
 class Machine():
+    # The whole state of the machine is represented with the
+    # frame-stack, an accumulator value that represents the
+    # most-recently-calculated value, and a convenience variable to
+    # pause the machine for debugging, or when a calculation is
+    # complete.
     def __init__(self):
 	self.base_frame =  Frame(None, symbol("base-frame"))
 	self.current_frame = self.base_frame
@@ -45,36 +61,47 @@ class Machine():
 	self.paused = True
     
 
-#--------------------------------- coo.
+#-------------------------------- EObject types -------------------------------#
+
 
 nil = EObject(None, "nil")
 
 def nilp(x):
-    return (x.type() == "nil")
-    
+    return (x.type() == "nil")    
 
 class Cons_cell():
     def __init__(self, car, cdr):
 	self.car = car
 	self.cdr = cdr
-    
 
 def cheap_cons(car, cdr):
+    # I call this 'cheap' because it can, in theory, violate the
+    # binding algebra that makes Eight work --- but it is much faster
+    # than a true Eight cons. You'll see the 'cheap_' prefix in
+    # relation to anything that ignores the binding algebra for speed.
     return EObject(Cons_cell(car, cdr), "cons")
-    
 
 def symbol(name):
     return EObject(name, "symbol")
-    
 
 def estring(str):
     return EObject(str, "string")
     
 
-#------------- Binding algebra ----------------------#
+#------------------------------ Binding algebra ------------------------------#
 
-def combine_bindings(a, b, newa, newb):
+def combine_bindings(a, b):
+    # Combine is the heart of the binding algebra! Two bindings, a and
+    # b, are given.  Three are returned: a new version of a and b,
+    # plus c, a 'combined' binding. The c will contain any
+    # symbol<->value pairs that a and b have in common, as well as any
+    # pairs the symbol of which appears *only* in a or b. If a symbol
+    # appears in *both* a and b, but bound to different values, then
+    # those two contradictory symbol<->value pairs will be places in
+    # new-a and new-b respectively.
     c = {}
+    newa = {}
+    newb = {}
     for sym in a:
         if sym in b:
             if a[sym] == b[sym]: # do I mean equal?
@@ -89,32 +116,15 @@ def combine_bindings(a, b, newa, newb):
         if not sym in a:
             c[sym] = b[sym]
 	    	
-    return c
+    return newa, newb, c
     
 
 def cons(car, cdr):
-    ncar = car.copy()
     ncdr = cdr.copy()
-
-    if (nilp(car)):
-        ret = cheap_cons(nil, ncdr)
-        ret.bindings = ncdr.bindings
-        ncdr.bindings = {}
-        return ret
-	
-
-    if (nilp(cdr)):
-        ret = cheap_cons(ncar, nil)
-        ret.bindings = ncar.bindings
-        ncar.bindings =  {}
-        return ret
-	
-
-    ncar.bindings =  {}
-    ncdr.bindings =  {}
+    ncar = car.copy()
     ret = cheap_cons(ncar, ncdr)
-    ret.bindings = combine_bindings(car.bindings, cdr.bindings,
-                                    ncar.bindings, ncdr.bindings)
+    ncar.bindings, ncdr.bindings, ret.bindings = combine_bindings(car.bindings, 
+                                                                  cdr.bindings)
     return ret
     
 
@@ -131,6 +141,10 @@ def cheap_cdr(x):
     
 
 def union_bindings(a, b):
+    # Unioning bindings: two bindings, a and b, become one. Every pair
+    # that is in b, and not a 'leaked' symbol, will appear in the new
+    # binding. All pairs in a that are not in conflict with b will
+    # appear in the new binding.
     ret =  {}
     for sym in a:
         ret[sym] = a[sym]
@@ -142,13 +156,12 @@ def union_bindings(a, b):
     return ret
     
 
-
 def car(x):
     if nilp(x):
         return nil
 	
     if not x.inner.value.__class__ == Cons_cell:
-        print "Car of a thing not consed!",  stringify(x)
+        print "",  stringify(x)
 
     ret = cheap_car(x).copy()
     ret.bindings = union_bindings(x.bindings, ret.bindings)
@@ -160,66 +173,80 @@ def cdr(x):
         return nil
 
     if not x.inner.value.__class__ == Cons_cell:
-        print "Cdr of a thing not consed!",  stringify(x)
+        print "",  stringify(x)
         
     ret = cheap_cdr(x).copy()
     ret.bindings = union_bindings(x.bindings, ret.bindings)
     return ret
     
 
-#---------------- OK. -------------------#
-
-def cheap_elist(*args):
-    ret = nil
-    for i in range(len(args)-1, -1, -1):
-        ret = cons_pair(args[i], ret)	
-    return ret
+#----------------------- List functions based on above ------------------------#
 
 def elist(*args):
     ret = nil
-    for i in range(len(args)-1, -1, -1):
+    for i in reversed(range(len(args))):
         ret = cons(args[i], ret)	
     return ret
     
 def append(x, y):
-    # Currently possible to blow the stack.
-    if nilp(x):
-        return y
-    return cons(car(x), append(cdr(x), y))
-    
+    # Because Python does not optimise tail-recursion, I will use an
+    # iterative solution. Nevertheless, here is what this function
+    # would look like, if it were safe:
+    #
+    # if nilp(x):
+    #     return y
+    # return cons(car(x), append(cdr(x), y))
+    #
+    # Alas, it is not to be.
+    ret = y
+    xlis = []
+    while not nilp(x):
+        xlis.append(car(x))
+        x = cdr(x)
+    for i in reversed(range(len(xlis))):
+        ret = cons(xlis[i], ret);
+    return ret
 
-#--------------- symbol binding shit --------------#
+
+#------------------------- Symbol binding and lookup --------------------------#
 
 
 def leaked():
-    return elist(symbol("leak"))
-    
+    # leaked just means using the symbol 'LEAKED' as a value. 
+    return elist(symbol("LEAKED"))
+
 
 def leakedp(x):
     if (x and
         x.type() == "cons" and
         cheap_car(x).type() == "symbol" and
-        cheap_car(x).inner.value == "leak"):
+        cheap_car(x).inner.value == "LEAKED"):
         return True
     return False
     
 
 def look_up(sym, m):
-    if (sym.inner.value in sym.bindings): # check in the local closing
+    # If a symbol is leaked, I should look in the next available scope
+    # up the stack. I start with the bindings on the symbol itself:
+    if (sym.inner.value in sym.bindings): 
         ret = sym.bindings[sym.inner.value]
     else:
         ret = leaked()
 	
+    # Then I try the current frame's scope, moving along the frame
+    # stack only when the symbol is leaked. If it has no binding at
+    # all, ...
     current_frame = m.current_frame
 
-    while leakedp(ret):  # in the current frame (and below)
+    while leakedp(ret): 
         if sym.inner.value in current_frame.scope:
             ret = current_frame.scope[sym.inner.value]
             current_frame = current_frame.next
         else:
             ret = nil
 	
-    if ret == nil: # and in the base frame.
+    # ... then I'll look in the base frame. Otherwise, return nil.
+    if ret == nil: 
         if sym.inner.value in m.base_frame.scope:
             ret = m.base_frame.scope[sym.inner.value]
 	
@@ -228,6 +255,8 @@ def look_up(sym, m):
 
 
 def set(sym, val, m):
+    # Set just looks up the value; if there is one already, it sets
+    # it, respecting closures. Otherwise, it's a global!
     oldval = look_up(sym, m)
     if nilp(oldval):
         m.base_frame.scope[sym.inner.value] = elist(val)
@@ -236,67 +265,62 @@ def set(sym, val, m):
 	
     
 
-
-
-
-#-------- machine shit -----------------#
+#--------------------------- Handling Lambda Lists ----------------------------#
 
 def asterixp(x):
-    if (x.type() == "cons" and
+    return (x.type() == "cons" and
 	    cheap_car(x).type() == "symbol" and
-	    cheap_car(x).inner.value == "*"):
-	    return True	
-    return False
-    
+	    cheap_car(x).inner.value == "*")
 
 def atpendp(x):
-    if (x.type() == "cons" and
+    return (x.type() == "cons" and
         cheap_car(x).type() == "symbol" and
-        cheap_car(x).inner.value == "@"):
-        return True	
-    return False
-    
+        cheap_car(x).inner.value == "@")
 
 def elipsisp(x):
-    return (x.type() == "symbol" and
-            x.inner.value == "...")
+    return (x.type() == "symbol" and x.inner.value == "...")
     
 
-def argument_chain(lambda_elist, arg_elist, chain):
-    if lambda_elist.type() == "nil":
+def argument_chain(lambda_list, arg_list, chain):
+    # I do not appreciate the way this function looks. 
+    # Even it' mamma don' love it.
+
+    if nilp(lambda_list):
         return chain
 
-    arg = car(arg_elist)
-    if (asterixp(arg)):
-        last =  Operation(chain,
-                          elist(lambda_elist, cdr(arg_elist)),
-                          "asterpend_continue")
-        ret =  Operation(last, car(cdr(arg)), "evaluate")
+    arg = car(arg_list)
 
-    elif (atpendp(arg)):
-        last =  Operation(chain,
-                          elist(lambda_elist, cdr(arg_elist)),
-                          "atpend_continue")
-        ret =  Operation(last, car(cdr(arg)), "evaluate")
+    if asterixp(arg):
+        aflag = None
+        cflag = "asterpend_continue"
+        func = car(cdr(arg))
+
+    elif atpendp(arg):
+        aflag = None
+        cflag = "atpend_continue"
+        func = car(cdr(arg))
 
     else:
-        alambda = car(lambda_elist)
-        flag = "argument"
+        aflag = "argument"
+        cflag = "continue"
+        alambda = car(lambda_list)
 
-        if (elipsisp(alambda)):
-            if (nilp(arg_elist)):
+        if elipsisp(alambda):
+            if nilp(arg_list):
                 return chain
-		
-            alambda = car(cdr(lambda_elist))
-            lambda_elist = cons(nil, lambda_elist)
-            flag = "e_argument"
+            else:
+                alambda = car(cdr(lambda_list))
+                aflag = "e_argument"
+
+        else:
+            lambda_list = cdr(lambda_list)
         
-        if (alambda.type() == "cons"):
+
+        if alambda.type() == "cons":
             name = car(cdr(alambda))
             if (arg.type() == "cons" and
                 car(arg).type() == "symbol" and
                 car(arg).inner.value == ","):
-                
                 func = car(cdr(arg))
             else:
                 func  = elist(car(alambda), arg)
@@ -305,14 +329,17 @@ def argument_chain(lambda_elist, arg_elist, chain):
             name = alambda
             func = arg
 	    
-        last = Operation(chain,
-                         elist(cdr(lambda_elist), cdr(arg_elist)),
-                         "continue")
-        ret = Operation(Operation(last, name, flag),
-                        func,
-                        "evaluate")	
+    chain = Operation(chain, elist(lambda_list, cdr(arg_list)), cflag)
+
+    if aflag:
+        chain = Operation(chain, name, aflag)
+
+    ret = Operation(chain, func, "evaluate")	
+
     return ret
     
+
+
 
 
 def clear_elist(x):
@@ -321,22 +348,66 @@ def clear_elist(x):
     return cons(elist(symbol("clear"), car(x)), clear_elist(cdr(x)))
     
 
-def machine_step(m):
-    # this is the heart of the eight machine
-    # and if an imperative def this long doesn't make you
-    # at least a little squeamish, you're not human.
-#    print "Accum:", stringify(m.accum)
-#    print stringify(m.current_frame)
-#    print "\n\n\n"
+def clearp(x):
+    return (x.type() == "symbol" and x.inner.value == "clear")
 
-    if (not m.current_frame.next):   # this block returns
-        # The current frame contains no further instructions.
+
+
+def evaluate_instruction(x, m):
+    # This is what the Eight machine will do when it is simply
+    # evaluating an EObject; no special flags or nuthin'.
+
+    if x.type() == "builtin":
+        x.inner.value(m)
+    
+    elif x.type() == "symbol":
+        ret  = look_up(x, m)
+
+        if nilp(ret):
+            signal(elist(estring("That's an unbound symbol, Ma'am:"), x), m)
+            return 
+
+        m.accum = car(ret)
+
+    elif x.bindings:
+        m.current_frame.scope = union_bindings(
+            m.current_frame.scope,
+            x.bindings)
+        nex = x.copy()
+        nex.bindings =  {}
+        m.current_frame.next =  Operation(m.current_frame.next,
+                                          nex,
+                                          "evaluate")
+            
+    elif x.type() == "cons":
+        # If the object's a list, then evaluate the first element, and
+        # treat it as a function.
+
+        # Clear is one of only two truly special forms in Eight. If
+        # the function is clear, then the machine returns the argument
+        # unaltered.
+        if clearp(car(x)):
+            m.accum = car(cdr(x))
+            
+        else:
+            m.current_frame = Frame(m.current_frame, x)
+            m.current_frame.scope = m.current_frame.below.scope
+            m.current_frame.next = Operation(m.current_frame.next, cdr(x), "apply")
+            m.current_frame.next = Operation(m.current_frame.next, car(x), "evaluate")
+		
+    else:
+        # It's some CRAZY type we've never heard of, amirite? Let's
+        # not evaluate it, and hate it because it's different.
+        m.accum = x
+
+
+def machine_step(m):
+
+    if (not m.current_frame.next): 
         if (m.current_frame.below != None):
-            # Move on to the next frame.
             m.current_frame = m.current_frame.below
             return
         else :
-            # The frame below is the base frame, so we must be done.
             m.paused = True
             return    
 
@@ -344,112 +415,64 @@ def machine_step(m):
     m.current_frame.next = instruction.next
 
     if (instruction.flag == "evaluate"):
-        if (instruction.instruction.type() == "builtin"):
-            instruction.instruction.inner.value(m)
-
-        elif (instruction.instruction.type() == "symbol") :
-		#alert("here")
- 		#alert(stringify(car(look_up(instruction.instruction, m))))
-            ret  = look_up(instruction.instruction, m)
-            if (nilp(ret)):
-		    #signal
-                print ("thass no' a symbol, lassie: ",
-                      stringify(instruction.instruction))
-                print stringify(m.current_frame);
-                return 
-            m.accum = car(ret)
-
-        elif instruction.instruction.bindings:
-            m.current_frame.scope = union_bindings(
-                m.current_frame.scope,
-                instruction.instruction.bindings)
-            nex = instruction.instruction.copy()
-            nex.bindings =  {}
-            m.current_frame.next =  Operation(m.current_frame.next,
-                                              nex,
-                                              "evaluate")
-            
-        elif (instruction.instruction.type() == "cons") :
-            if (car(instruction.instruction).type() == "symbol" and
-                car(instruction.instruction).inner.value == "clear"):
-                m.accum = car(cdr(instruction.instruction))
-                
-            else:
-                name = instruction.instruction
-                m.current_frame =  Frame(m.current_frame, name)
-                m.current_frame.scope = m.current_frame.below.scope
-                m.current_frame.next =  Operation(
-                    Operation(
-                        m.current_frame.next,
-                        cdr(instruction.instruction),
-                        "apply"),
-                    car(instruction.instruction),
-                    "evaluate")
-		
-
-        else:
-		# It's some CRAZY type, amirite? Let's not evaluate it,
-		# and hate it because it's different.
-		m.accum = instruction.instruction
+        evaluate_instruction(instruction.instruction, m)
 	    
-    else:
-        # So we must be dealing with a fancy flag.
-        if (instruction.flag == "apply"):
-            m.current_frame.next =  Operation(m.current_frame.next,
-                                              cdr(m.accum),
-                                              "do")
-            m.current_frame.next = argument_chain(car(m.accum),
-                                                  instruction.instruction,
-                                                  m.current_frame.next)
+    elif (instruction.flag == "apply"):
+        m.current_frame.next =  Operation(m.current_frame.next,
+                                          cdr(m.accum),
+                                          "do")
+        m.current_frame.next = argument_chain(car(m.accum),
+                                              instruction.instruction,
+                                              m.current_frame.next)
             
-        elif (instruction.flag == "continue"):
-            m.current_frame.next = argument_chain(
-                car(instruction.instruction),
-                car(cdr(instruction.instruction)),
-                m.current_frame.next)
+    elif (instruction.flag == "continue"):
+        m.current_frame.next = argument_chain(
+            car(instruction.instruction),
+            car(cdr(instruction.instruction)),
+            m.current_frame.next)
+        
+    elif (instruction.flag == "asterpend_continue"):
+        m.current_frame.next = argument_chain(
+            car(instruction.instruction),
+            append(m.accum, car(cdr(instruction.instruction))),
+            m.current_frame.next)
+        
+    elif (instruction.flag == "atpend_continue"):
+        m.current_frame.next = argument_chain(
+            car(instruction.instruction),
+            append(clear_elist(m.accum),
+                   car(cdr(instruction.instruction))),
+            m.current_frame.next)
+        
+    elif (instruction.flag == "argument"):
+        m.current_frame.rib[instruction.instruction.inner.value] = elist(m.accum)
+        
+    elif (instruction.flag == "e_argument"):
+        sym = instruction.instruction.inner.value
+        if (sym in m.current_frame.rib):
+            so_far = m.current_frame.rib[sym]
+            so_far = append(car(so_far), elist(m.accum))
+            m.current_frame.rib[sym] = elist(so_far)
+        else :
+            m.current_frame.rib[sym] = elist(elist(m.accum))
             
-        elif (instruction.flag == "asterpend_continue"):
-            m.current_frame.next = argument_chain(
-                car(instruction.instruction),
-                append(m.accum, car(cdr(instruction.instruction))),
-                m.current_frame.next)
-
-        elif (instruction.flag == "atpend_continue"):
-            m.current_frame.next = argument_chain(
-                car(instruction.instruction),
-                append(clear_elist(m.accum),
-                       car(cdr(instruction.instruction))),
-                m.current_frame.next)
             
-        elif (instruction.flag == "argument"):
-            m.current_frame.rib[instruction.instruction.inner.value] = elist(m.accum)
+    elif (instruction.flag == "do") :
+        m.current_frame.scope = m.current_frame.rib
+        temp = m.current_frame.next
+        chain = m.current_frame
+        while not nilp(instruction.instruction):
+            chain.next =  Operation(m.current_frame.next,
+                                    car(instruction.instruction),
+                                    "evaluate")
+            chain = chain.next
+            instruction.instruction = cdr(instruction.instruction)
             
-        elif (instruction.flag == "e_argument"):
-            sym = instruction.instruction.inner.value
-            if (sym in m.current_frame.rib):
-                so_far = m.current_frame.rib[sym]
-                so_far = append(car(so_far), elist(m.accum))
-                m.current_frame.rib[sym] = elist(so_far)
-            else :
-                m.current_frame.rib[sym] = elist(elist(m.accum))
-		
-                
-        elif (instruction.flag == "do") :
-            m.current_frame.scope = m.current_frame.rib
-            temp = m.current_frame.next
-            chain = m.current_frame
-            while not nilp(instruction.instruction):
-                chain.next =  Operation(m.current_frame.next,
-                                        car(instruction.instruction),
-                                        "evaluate")
-                chain = chain.next
-                instruction.instruction = cdr(instruction.instruction)
-		
-		chain.next = temp
+        chain.next = temp
                 
                 
                 
-                
+#---------------------------------- Continuations -----------------------------#
                 
 def copy_frame(x) :
     if (x.below):
@@ -486,14 +509,14 @@ def toss_signal(signal, m):
         m.current_frame = m.current_frame.below
 	
     if not m.current_frame.signal_handler and not m.current_frame.below:
-        print "No BASE SIGNAL HANDLER grr."
+        print "\n\nNO BASE SIGNAL HANDLER:", stringify(signal)
     else :
-        m.current_frame.next =  Operation(m.current_frame.next, 
-                                          elist(m.current_frame.signal_handler, 
-                                                elist(symbol("clear"), signal)), 
-                                          "evaluate")
+        m.current_frame.next = Operation(m.current_frame.next, 
+                                         elist(m.current_frame.signal_handler,
+                                               elist(symbol("clear"), signal)),
+                                         "evaluate")
 
-#--------------- building it in -----------------#
+#------------------------------ Building in built-ins -------------------------#
 
 def add_fn(m, name, alambda, fn):
     fun = elist(parse(preparse(alambda)),  EObject(fn, "builtin"))
@@ -506,70 +529,70 @@ def get_arg(x, m):
 
 
 def add_em_all(m):
-    def bcons(m):
+    def consb(m):
         cdr =  get_arg("cdr", m)
         if (not (cdr.inner.value.__class__ == Cons_cell) and
             not nilp(cdr)):
             alert("Warning that you should make real elists!")
         m.accum = cons(get_arg("car", m), cdr)
 
-    add_fn(m, "cons", "(car cdr)", bcons)
+    add_fn(m, "cons", "(car cdr)", consb)
 
-    def bcar(m):
+    def carb(m): # Bad for my diet
         x =  get_arg("x", m)
         m.accum = car(x)
 
-    add_fn(m, "car", "(x)", bcar)
+    add_fn(m, "car", "(x)", carb)
 
-    def bcdr(m):
+    def cdrb(m):
         x =  get_arg("x", m)
         m.accum = cdr(x)
 
-    add_fn(m, "cdr", "(x)", bcdr)
+    add_fn(m, "cdr", "(x)", cdrb)
 
-    def binfo(m):
+    def infob(m):
         x =  get_arg("x", m)
         m.accum =  EObject(x.inner.info, "table")
 
-    add_fn(m, "info", "(x)", binfo)
+    add_fn(m, "info", "(x)", infob)
     
     def breakb(m):
         m.paused = True
     add_fn(m, "break", "()", breakb)
 
-    def bquote(m):
+    def quoteb(m): # Please don't, I've heard all I wish to
         x =  get_arg("x", m)
         temp = m.current_frame
         m.current_frame = temp.below
         m.accum = enclose(x, m)
         m.current_frame = temp
 
-    add_fn(m, "'", "((clear x))", bquote)
+    add_fn(m, "'", "((clear x))", quoteb)
 
-    def bset(m):
+    def setb(m):
         sym =  get_arg("symbol", m)
         val =  get_arg("value", m)
         set(sym, val, m)
         m.accum = val
 
-    add_fn(m, "set!", "('symbol value)", bset)
+    add_fn(m, "set!", "('symbol value)", setb)
 
-    def bprint(m):
+    def printb(m):
         val =  get_arg("thing", m)
         print stringify(val),
         m.accum = val
         
-    add_fn(m, "print", "(thing)", bprint)
+    add_fn(m, "print", "(thing)", printb)
     
-    def bleak(m):
+    def bleak(m): # Ooh, Russian lit
         sym =  get_arg("symbol", m)
         val =  get_arg("expression", m)
-        val.bindings[sym.inner.value] = elist(symbol("leak"))
+        val.bindings[sym.inner.value] = elist(symbol("LEAKED"))
         m.accum = val
 
     add_fn(m, "leak", "(symbol expression)", bleak)
 
-    def atom_pb(m): # what, lead?
+    def atom_pb(m): # What, lead?
         x =  get_arg("x", m)
         if (x.type() == "cons"):
             m.accum = nil
@@ -593,7 +616,7 @@ def add_em_all(m):
             
     add_fn(m, "oif", "(test 'then 'else)", oifb)
     
-    def isb(m): # brother to canby
+    def isb(m): # The brother to canby
         a =  get_arg("a", m)
         b =  get_arg("b", m)
         if (a == b or
@@ -718,9 +741,10 @@ def continu(m):
 	
     
         
-# ------------------------------ Parsing ----------------------------#
+# ---------------------------------- Parsing ----------------------------------#
 # This is a bit hacky, yes? TODO: come back and write a nice parser.
 
+import re
 
 def ultraparse(astr):
     return parse(preparse("((clear (() "+astr+")))"))
@@ -795,7 +819,7 @@ def parse_elist(tokens):
     return elist(*lis)
     
 
-#------------------------- Unparsing -------------------------#
+#----------------------------------- Unparsing --------------------------------#
 
 
 def stringify(x):
@@ -808,7 +832,7 @@ def stringify(x):
     elif (x.__class__ == Frame):
         return stringify_frame(x)
     else:
-        alert("I don't know how to astringiy that.")
+        print "I don't know how to stringify that: ", x, ". Sorry, coach."
         return "STRINGIFY ERR"
 	
 
@@ -832,7 +856,7 @@ def stringify_scope(x):
     
 
 def stringify_operation(x):
-    if x == None:
+    if not x:
         return ""
     else :
         return ("|-> " + stringify(x.instruction) + ", flagged " + x.flag +
@@ -840,14 +864,14 @@ def stringify_operation(x):
 	
     
 def stringify_eobject(x):
-    type = x.type()
-    if type == "cons":
+    typ = x.type()
+    if typ == "cons":
         ret = "(" + stringify_elist(x) + ")"
-    elif (type == "nil"):
+    elif typ == "nil":
         ret = "()"
-    elif (type == "astring"):
+    elif typ == "string":
         ret = "\"" + x.inner.value + "\""
-    elif (type == "builtin"):
+    elif typ == "builtin":
         ret = "BUILTIN"
     else :
         ret = x.inner.value.__str__()
@@ -855,8 +879,8 @@ def stringify_eobject(x):
     
 
 def stringify_elist(x):
-    if (x.inner.value.cdr.type() == "nil"):
+    if nilp(x.inner.value.cdr):
         return stringify(x.inner.value.car)
-    else :
+    else:
         return (stringify(x.inner.value.car) + " " +
                 stringify_elist(x.inner.value.cdr))
