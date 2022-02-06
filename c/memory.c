@@ -7,7 +7,7 @@
                                 `8.   .88P 
                                  `boood8'  
                                       
- EightLisp, by Sam Bleckley (diiq, stm31415@gmail.com)
+ EightLisp, by Sam Bleckley
 
  This houses the memoy subsystem, the garbage collector, and
  associated testing routines.
